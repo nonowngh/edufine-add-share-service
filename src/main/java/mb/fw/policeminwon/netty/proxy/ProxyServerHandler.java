@@ -21,6 +21,7 @@ import mb.fw.policeminwon.parser.TestCallParser;
 import mb.fw.policeminwon.parser.slice.HeaderSlice;
 import mb.fw.policeminwon.parser.slice.VeiwBillingDetailBodySlice;
 import mb.fw.policeminwon.utils.ByteBufUtils;
+import mb.fw.policeminwon.web.dto.ESBApiRequest;
 
 @Slf4j
 public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
@@ -66,7 +67,7 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 		if (policeSystemCode.startsWith(BodyCompareParser.getSJSElctNum())) {
 			if (TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag)) {
 				log.info("고지내역 상세조회...[{}] -> [{}]", "금결원", "즉심(SJS)");
-				restApiCall(inBuf);
+				esbApiCall(VeiwBillingDetailBodySlice.getTotalBody(inBuf));
 			} else {
 				log.info("고지내역 상세조회...[{}] -> [{}]", "즉심(SJS)", "금결원");
 				client.callAsync(inBuf);
@@ -90,13 +91,13 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 		client.callAsync(outBuf);
 	}
 
-	private void restApiCall(ByteBuf inBuf) {
+	private void esbApiCall(String message) {
 		if (webClient != null) {
-			webClient.post().bodyValue(inBuf.toString(StandardCharsets.UTF_8)).retrieve().bodyToMono(String.class)
+			webClient.post().bodyValue(ESBApiRequest.builder().bodyData(message).build()).retrieve().bodyToMono(String.class)
 					.doOnNext(response -> {
-						System.out.println("API 응답: " + response);
+						log.info("API 응답: " + response);
 					}).doOnError(error -> {
-						System.err.println("API 오류: " + error.getMessage());
+						log.error("API 오류: " + error.getMessage());
 					}).subscribe();
 		} else {
 			log.error("WebClient is NULL. check yaml file.");

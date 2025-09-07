@@ -12,7 +12,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 import lombok.Data;
 import mb.fw.policeminwon.netty.proxy.ProxyServer;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
-import mb.fw.policeminwon.netty.summary.SummaryServer;
 
 @Data
 @Configuration
@@ -38,9 +37,9 @@ public class NettyServerConfiguration {
 		return new ProxyServer(proxy.getBindPort(), client, optionalWebClient);
 	}
 
-	@Bean(initMethod = "start", destroyMethod = "shutdown")
-	@ConditionalOnProperty(prefix = "tcp.server.summary", name = "enabled", havingValue = "true")
-	SummaryServer summaryServer() {
-		return new SummaryServer(summary.getBindPort());
-	}
+//	@Bean(initMethod = "start", destroyMethod = "shutdown")
+//	@ConditionalOnProperty(prefix = "tcp.server.summary", name = "enabled", havingValue = "true")
+//	SummaryServer summaryServer() {
+//		return new SummaryServer(summary.getBindPort());
+//	}
 }

@@ -1,43 +1,43 @@
 package mb.fw.policeminwon.utils;
 
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import mb.fw.policeminwon.constants.ByteEncodingConstants;
 
 public class ByteBufUtils {
 
-	static Charset charset = StandardCharsets.UTF_8;
-
 	public static String getStringfromBytebuf(ByteBuf buf, int statrtIdx, int length) {
-		return buf.toString(statrtIdx, length, charset);
+		return buf.toString(statrtIdx, length, ByteEncodingConstants.CHARSET);
 	}
 	
 	public static String getStringValuefromByteBuf(ByteBuf buf, int statrtIdx, int length) {
-		return buf.slice(statrtIdx, length).toString(charset).trim();
+		return buf.slice(statrtIdx, length).toString(ByteEncodingConstants.CHARSET).trim();
 	}
 	
 	public static Integer getIntegerValuefromByteBuf(ByteBuf buf, int statrtIdx, int length) {
-		return Integer.valueOf(buf.slice(statrtIdx, length).toString(charset));
+		return Integer.valueOf(buf.slice(statrtIdx, length).toString(ByteEncodingConstants.CHARSET));
 	}
 	
 	public static int setStringAndMoveOffset(Consumer<String> setter, ByteBuf buf, int start, int length) {
 	    int end = start + length;
 	    setter.accept(ByteBufUtils.getStringValuefromByteBuf(buf, start, length));
+	    System.out.println(ByteBufUtils.getStringValuefromByteBuf(buf, start, length));
 	    return end;
 	}
 	
 	public static int setIntegerAndMoveOffset(Consumer<Integer> setter, ByteBuf buf, int start, int length) {
 	    int end = start + length;
 	    setter.accept(ByteBufUtils.getIntegerValuefromByteBuf(buf, start, length));
+	    System.out.println(ByteBufUtils.getIntegerValuefromByteBuf(buf, start, length));
 	    return end;
 	}
 	
 	public static void writeRightPaddingString(ByteBuf buf, String value, int fixedLength) {
-	    byte[] rawBytes = value.getBytes(charset);
+	    byte[] rawBytes = value.getBytes(ByteEncodingConstants.CHARSET);
 	    int paddingLength = fixedLength - rawBytes.length;
 
 	    if (paddingLength < 0) {

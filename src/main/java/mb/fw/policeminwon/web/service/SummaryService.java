@@ -9,7 +9,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import mb.fw.policeminwon.entity.ViewBillingDetaillEntity;
 import mb.fw.policeminwon.parser.ViewBillingDetaillParser;
-import mb.fw.policeminwon.web.dto.SummaryAPIRequest;
+import mb.fw.policeminwon.web.dto.ESBApiRequest;
 import mb.fw.policeminwon.web.mapper.ViewBillingDetaillMapper;
 
 @lombok.extern.slf4j.Slf4j
@@ -20,12 +20,13 @@ public class SummaryService {
 
 	private final ViewBillingDetaillMapper viewBillingDetaillMapper;
 
-	public SummaryService(ViewBillingDetaillMapper viewBillingDetaillMapper, @Qualifier("callBackWebClient") WebClient callBackWebClient) {
+	public SummaryService(ViewBillingDetaillMapper viewBillingDetaillMapper,
+			@Qualifier("callBackWebClient") WebClient callBackWebClient) {
 		this.viewBillingDetaillMapper = viewBillingDetaillMapper;
 		this.callBackWebClient = callBackWebClient;
 	}
 
-	public void doAsyncProcess(SummaryAPIRequest request) {
+	public void doAsyncProcess(ESBApiRequest request) {
 		ViewBillingDetaillEntity resultEntity = viewBillingDetaillMapper.selectBillingDetaillByElecPayNo(
 				ViewBillingDetaillParser.toEntity(request.getBodyData()).getElecPayNo());
 		String returnMessage = ViewBillingDetaillParser.toMessage(resultEntity);
