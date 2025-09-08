@@ -2,7 +2,7 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
-    <bean class="org.apache.commons.dbcp.BasicDataSource" id="dataSource">
+<!--    <bean class="org.apache.commons.dbcp.BasicDataSource" id="dataSource">
         <description><![CDATA[$dbcp.description]]></description>
         <property name="url" value="jdbc:oracle:thin:@localhost:1521/xe"/>
         <property name="driverClassName" value="oracle.jdbc.driver.OracleDriver"/>
@@ -21,7 +21,7 @@
         <property name="timeBetweenEvictionRunsMillis" value="0"/>
         <property name="minEvictableIdleTimeMillis" value="2000000"/>
         <property name="numTestsPerEvictionRun" value="3"/>
-    </bean>
+    </bean>-->
 
     <bean class="com.indigo.indigomq.pool.PooledConnectionFactory"
           destroy-method="stop" id="jmsConnectionFactory">

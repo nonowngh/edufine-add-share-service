@@ -10,9 +10,10 @@
         <setting name="defaultStatementTimeout" value="10000" />
     </settings>
     <mappers>
-      <mapper resource="SQL_IF_REST_DB_01.xml" />
+<!--      <mapper resource="SQL_IF_REST_DB_01.xml" />
       <mapper resource="SQL_IF_REST_DB_02.xml" />
       <mapper resource="SQL_IF_REST_DB_03.xml" />
-      <mapper resource="SQL_IF_REST_DB_04.xml" />
+      <mapper resource="SQL_IF_REST_DB_04.xml" />-->
+      <mapper resource="ViewBillingDetailMapper.xml" />
     </mappers>
 </configuration>

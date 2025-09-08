@@ -8,7 +8,7 @@ import io.netty.util.ResourceLeakDetector;
 
 @ComponentScan(basePackages = {"mb.fw.policeminwon", "mb.fw.adaptor"})
 @SpringBootApplication
-public class PoliceMinwonApplication {
+	public class PoliceMinwonApplication {
 
 	public static void main(String[] args) {
 		ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);

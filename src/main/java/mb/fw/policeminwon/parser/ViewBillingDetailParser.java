@@ -4,17 +4,17 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import lombok.extern.slf4j.Slf4j;
 import mb.fw.policeminwon.constants.ByteEncodingConstants;
-import mb.fw.policeminwon.entity.ViewBillingDetaillEntity;
+import mb.fw.policeminwon.entity.ViewBillingDetailEntity;
 import mb.fw.policeminwon.utils.ByteBufUtils;
 
 /**
  * 경찰청 범칙금 - 과태료 고지내역 상세 조회
  */
 @Slf4j
-public class ViewBillingDetaillParser {
-	public static ViewBillingDetaillEntity toEntity(String data) {
+public class ViewBillingDetailParser {
+	public static ViewBillingDetailEntity toEntity(String data) {
 		ByteBuf buf = Unpooled.copiedBuffer(data, ByteEncodingConstants.CHARSET);
-		ViewBillingDetaillEntity entity = new ViewBillingDetaillEntity();
+		ViewBillingDetailEntity entity = new ViewBillingDetailEntity();
 		int offset = 0;
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setElecPayNo, buf, offset, 19); // 전자납부번호 (AN, 19)
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setReserveField1, buf, offset, 20); // 예비 정보 FIELD 1 (AN, 20)
@@ -37,27 +37,27 @@ public class ViewBillingDetaillParser {
 		offset = ByteBufUtils.setIntegerAndMoveOffset(entity::setPayAmountAfterDue, buf, offset, 15); // 납기후 금액 (N, 15)
 		offset = ByteBufUtils.setIntegerAndMoveOffset(entity::setItemCode, buf, offset, 7); // 징수 과목 코드(세목 코드) (N, 7)
 		offset = ByteBufUtils.setIntegerAndMoveOffset(entity::setFiscalYear, buf, offset, 4); // 징수 결의 회계 년도 (N, 4)
-		offset = ByteBufUtils.setIntegerAndMoveOffset(entity::setPayDueDateIn, buf, offset, 8); // 납기일(납기내) (N, 8)
-		offset = ByteBufUtils.setIntegerAndMoveOffset(entity::setPayDueDateAfter, buf, offset, 8); // 납기일(납기후) (N, 8)
-		offset = ByteBufUtils.setIntegerAndMoveOffset(entity::setTaxReasonDate, buf, offset, 14); // 과세 원인 일시 (N, 14)
-		offset = ByteBufUtils.setIntegerAndMoveOffset(entity::setViolationDate, buf, offset, 14); // 위반 일시 (N, 14)
+		offset = ByteBufUtils.setStringAndMoveOffset(entity::setPayDueDateIn, buf, offset, 8); // 납기일(납기내) (N, 8)
+		offset = ByteBufUtils.setStringAndMoveOffset(entity::setPayDueDateAfter, buf, offset, 8); // 납기일(납기후) (N, 8)
+		offset = ByteBufUtils.setStringAndMoveOffset(entity::setTaxReasonDate, buf, offset, 14); // 과세 원인 일시 (N, 14)
+		offset = ByteBufUtils.setStringAndMoveOffset(entity::setViolationDate, buf, offset, 14); // 위반 일시 (N, 14)
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setViolationLocation, buf, offset, 40); // 위반 장소 (AHNS, 40)
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setViolationContent, buf, offset, 100); // 위반 내용 (AHNS, 100)
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setViolationCarNo, buf, offset, 20); // 위반차량 번호 (AHNS, 20)
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setLawBasis, buf, offset, 100); // 법령 근거 (AHNS, 100)
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setReserveField5, buf, offset, 7); // 예비 정보 FIELD 5 (AN, 7)
-		offset = ByteBufUtils.setIntegerAndMoveOffset(entity::setPayDate, buf, offset, 14); // 납부 일시 (N, 14)
+		offset = ByteBufUtils.setStringAndMoveOffset(entity::setPayDate, buf, offset, 14); // 납부 일시 (N, 14)
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setAfterDueType, buf, offset, 1); // 납기 내후 구분 (AN, 1)
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setObligorName, buf, offset, 8); // 납부의무자 성명 (AN, 8)
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setCardPayYn, buf, offset, 1); // 신용카드 납부 제하 여부 (AN, 1)
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setReserveField6, buf, offset, 18); // 예비 정보 FIELD 6 (AN, 18)
 		}catch(Exception e) {
-			log.error("byte index error...rest field skip -> " + e.getMessage());
+			log.warn("byte index error...rest field skip -> " + e.getMessage());
 		}
 		return entity;
 	}
 
-	public static String toMessage(ViewBillingDetaillEntity entity) {
+	public static String toMessage(ViewBillingDetailEntity entity) {
 		ByteBuf buf = Unpooled.buffer();		
 		ByteBufUtils.writeRightPaddingString(buf, entity.getElecPayNo(), 19);
 	    ByteBufUtils.writeRightPaddingString(buf, entity.getReserveField1(), 20);
@@ -79,16 +79,16 @@ public class ViewBillingDetaillParser {
 	    ByteBufUtils.writeLeftPaddingNumber(buf, entity.getPayAmountAfterDue(), 15);
 	    ByteBufUtils.writeLeftPaddingNumber(buf, entity.getItemCode(), 7);
 	    ByteBufUtils.writeLeftPaddingNumber(buf, entity.getFiscalYear(), 4);
-	    ByteBufUtils.writeLeftPaddingNumber(buf, entity.getPayDueDateIn(), 8);
-	    ByteBufUtils.writeLeftPaddingNumber(buf, entity.getPayDueDateAfter(), 8);
-	    ByteBufUtils.writeLeftPaddingNumber(buf, entity.getTaxReasonDate(), 14);
-	    ByteBufUtils.writeLeftPaddingNumber(buf, entity.getViolationDate(), 14);
+	    ByteBufUtils.writeRightPaddingString(buf, entity.getPayDueDateIn(), 8);
+	    ByteBufUtils.writeRightPaddingString(buf, entity.getPayDueDateAfter(), 8);
+	    ByteBufUtils.writeRightPaddingString(buf, entity.getTaxReasonDate(), 14);
+	    ByteBufUtils.writeRightPaddingString(buf, entity.getViolationDate(), 14);
 	    ByteBufUtils.writeRightPaddingString(buf, entity.getViolationLocation(), 40);
 	    ByteBufUtils.writeRightPaddingString(buf, entity.getViolationContent(), 100);
 	    ByteBufUtils.writeRightPaddingString(buf, entity.getViolationCarNo(), 20);
 	    ByteBufUtils.writeRightPaddingString(buf, entity.getLawBasis(), 100);
 	    ByteBufUtils.writeRightPaddingString(buf, entity.getReserveField5(), 7);
-	    ByteBufUtils.writeLeftPaddingNumber(buf, entity.getPayDate(), 14);
+	    ByteBufUtils.writeRightPaddingString(buf, entity.getPayDate(), 14);
 	    ByteBufUtils.writeRightPaddingString(buf, entity.getAfterDueType(), 1);
 	    ByteBufUtils.writeRightPaddingString(buf, entity.getObligorName(), 8);
 	    ByteBufUtils.writeRightPaddingString(buf, entity.getCardPayYn(), 1);

@@ -7,10 +7,10 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import mb.fw.policeminwon.entity.ViewBillingDetaillEntity;
-import mb.fw.policeminwon.parser.ViewBillingDetaillParser;
+import mb.fw.policeminwon.entity.ViewBillingDetailEntity;
+import mb.fw.policeminwon.parser.ViewBillingDetailParser;
 import mb.fw.policeminwon.web.dto.ESBApiRequest;
-import mb.fw.policeminwon.web.mapper.ViewBillingDetaillMapper;
+import mb.fw.policeminwon.web.mapper.ViewBillingDetailMapper;
 
 @lombok.extern.slf4j.Slf4j
 @Service
@@ -18,18 +18,22 @@ public class SummaryService {
 
 	private final WebClient callBackWebClient;
 
-	private final ViewBillingDetaillMapper viewBillingDetaillMapper;
+	private final ViewBillingDetailMapper viewBillingDetailMapper;
 
-	public SummaryService(ViewBillingDetaillMapper viewBillingDetaillMapper,
+	public SummaryService(ViewBillingDetailMapper viewBillingDetailMapper,
 			@Qualifier("callBackWebClient") WebClient callBackWebClient) {
-		this.viewBillingDetaillMapper = viewBillingDetaillMapper;
+		this.viewBillingDetailMapper = viewBillingDetailMapper;
 		this.callBackWebClient = callBackWebClient;
 	}
 
 	public void doAsyncProcess(ESBApiRequest request) {
-		ViewBillingDetaillEntity resultEntity = viewBillingDetaillMapper.selectBillingDetaillByElecPayNo(
-				ViewBillingDetaillParser.toEntity(request.getBodyData()).getElecPayNo());
-		String returnMessage = ViewBillingDetaillParser.toMessage(resultEntity);
+		String elecPayNo =  ViewBillingDetailParser.toEntity(request.getBodyData()).getElecPayNo();
+		ViewBillingDetailEntity entity = viewBillingDetailMapper.selectBillingDetailByElecPayNo(elecPayNo);
+		if(entity == null) {
+			log.error("elecPayNo '{}' 해당하는 정보가 없음", elecPayNo);
+			return;
+		}
+		String returnMessage = ViewBillingDetailParser.toMessage(entity);
 
 		CompletableFuture.runAsync(() -> {
 			request.setBodyData(returnMessage);

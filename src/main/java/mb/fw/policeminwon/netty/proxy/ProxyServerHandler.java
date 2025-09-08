@@ -13,6 +13,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import lombok.extern.slf4j.Slf4j;
+import mb.fw.policeminwon.constants.ByteEncodingConstants;
 import mb.fw.policeminwon.constants.TcpHeaderSrFlag;
 import mb.fw.policeminwon.constants.TcpHeaderTransactionCode;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
@@ -87,7 +88,7 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 		String resStr = TestCallParser.makeResponeMessage(
 				TestCallParser.toEntity(inBuf.toString(StandardCharsets.UTF_8)),
 				ByteBufUtils.getStringfromBytebuf(inBuf, 16, 3));
-		ByteBuf outBuf = ByteBufUtils.addMessageLength(Unpooled.copiedBuffer(resStr, StandardCharsets.UTF_8));
+		ByteBuf outBuf = ByteBufUtils.addMessageLength(Unpooled.copiedBuffer(resStr, ByteEncodingConstants.CHARSET));
 		client.callAsync(outBuf);
 	}
 

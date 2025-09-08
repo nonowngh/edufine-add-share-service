@@ -28,5 +28,10 @@
     "name": "spring.mybatis.type-aliases-package",
     "type": "java.lang.String",
     "description": "A description for 'spring.mybatis.type-aliases-package'"
+  },
+  {
+    "name": "mybatis.map-underscore-to-camel-case",
+    "type": "java.lang.String",
+    "description": "A description for 'mybatis.map-underscore-to-camel-case'"
   }
 ]}
