@@ -1,26 +1,22 @@
 package mb.fw.policeminwon.netty.proxy;
 
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.web.reactive.function.client.WebClient;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import lombok.extern.slf4j.Slf4j;
-import mb.fw.policeminwon.constants.ByteEncodingConstants;
 import mb.fw.policeminwon.constants.TcpHeaderSrFlag;
 import mb.fw.policeminwon.constants.TcpHeaderTransactionCode;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
 import mb.fw.policeminwon.parser.BodyCompareParser;
-import mb.fw.policeminwon.parser.TestCallParser;
-import mb.fw.policeminwon.parser.slice.HeaderSlice;
-import mb.fw.policeminwon.parser.slice.VeiwBillingDetailBodySlice;
+import mb.fw.policeminwon.parser.CommonHeaderParser;
+import mb.fw.policeminwon.parser.slice.MessageSlice;
 import mb.fw.policeminwon.utils.ByteBufUtils;
 import mb.fw.policeminwon.web.dto.ESBApiRequest;
 
@@ -39,9 +35,9 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		ByteBuf inBuf = (ByteBuf) msg;
 		try {
-			String transactionCode = HeaderSlice.getTransactionCode(inBuf);
+			String transactionCode = MessageSlice.getTransactionCode(inBuf);
 			log.info("transactionCode -> [{}]", transactionCode);
-			String srFlag = HeaderSlice.getSrFlag(inBuf);
+			String srFlag = MessageSlice.getSrFlag(inBuf);
 
 			Map<String, Runnable> actions = new HashMap<>();
 			// 테스트 콜
@@ -64,11 +60,11 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 	}
 
 	private void veiwBillingDetail(ByteBuf inBuf, String srFlag) {
-		String policeSystemCode = VeiwBillingDetailBodySlice.getElecPayNo(inBuf);
+		String policeSystemCode = MessageSlice.getElecPayNo(inBuf);
 		if (policeSystemCode.startsWith(BodyCompareParser.getSJSElctNum())) {
 			if (TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag)) {
 				log.info("고지내역 상세조회...[{}] -> [{}]", "금결원", "즉심(SJS)");
-				esbApiCall(VeiwBillingDetailBodySlice.getTotalBody(inBuf));
+				esbApiCall(MessageSlice.getHeaderMessage(inBuf), MessageSlice.getVeiwBillingDetailTotalBody((inBuf)));
 			} else {
 				log.info("고지내역 상세조회...[{}] -> [{}]", "즉심(SJS)", "금결원");
 				client.callAsync(inBuf);
@@ -84,18 +80,29 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 	}
 
 	private void testCall(ByteBuf inBuf) {
-		log.info("테스트 콜...[{}] -> [{}]", "금결원", "프록시");
-		String resStr = TestCallParser.makeResponeMessage(
-				TestCallParser.toEntity(inBuf.toString(StandardCharsets.UTF_8)),
-				ByteBufUtils.getStringfromBytebuf(inBuf, 16, 3));
-		ByteBuf outBuf = ByteBufUtils.addMessageLength(Unpooled.copiedBuffer(resStr, ByteEncodingConstants.CHARSET));
-		client.callAsync(outBuf);
+//		log.info("테스트 콜...[{}] -> [{}]", "금결원", "프록시");
+//		if(client.getBypassTestCall()) client.callAsync(inBuf);
+//		else {
+//		ByteBuf outBuf = ByteBufUtils
+//				.addMessageLength(CommonHeaderParser.responseHeader(inBuf, "0810", "000", "testcall0123"));
+//		client.callAsync(outBuf);
+//		}
+		
+	    log.info("테스트 콜...[{}] -> [{}]", "금결원", "프록시");	    
+	    Runnable callAsync = () -> {
+	        ByteBuf outBuf = client.getBypassTestCall()
+	                ? inBuf
+	                : ByteBufUtils.addMessageLength(CommonHeaderParser.responseHeader(inBuf, "0810", "000", "testcall0123"));
+	        
+	        client.callAsync(outBuf);
+	    };	    
+	    callAsync.run();
 	}
 
-	private void esbApiCall(String message) {
+	private void esbApiCall(String header, String body) {
 		if (webClient != null) {
-			webClient.post().bodyValue(ESBApiRequest.builder().bodyData(message).build()).retrieve().bodyToMono(String.class)
-					.doOnNext(response -> {
+			webClient.post().bodyValue(ESBApiRequest.builder().headerMessage(header).bodyMessage(body).build())
+					.retrieve().bodyToMono(String.class).doOnNext(response -> {
 						log.info("API 응답: " + response);
 					}).doOnError(error -> {
 						log.error("API 오류: " + error.getMessage());

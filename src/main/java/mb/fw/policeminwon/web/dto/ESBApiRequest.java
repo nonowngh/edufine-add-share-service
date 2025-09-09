@@ -11,5 +11,7 @@ public class ESBApiRequest {
 	
 	String transactionId;
 	
-	String bodyData;
+	String bodyMessage;
+	
+	String headerMessage;
 }

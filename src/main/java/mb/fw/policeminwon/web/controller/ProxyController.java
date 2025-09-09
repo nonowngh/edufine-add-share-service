@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RestController;
 import io.netty.buffer.Unpooled;
 import mb.fw.policeminwon.constants.ByteEncodingConstants;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
+import mb.fw.policeminwon.parser.CommonHeaderParser;
+import mb.fw.policeminwon.utils.ByteBufUtils;
 import mb.fw.policeminwon.web.dto.ESBApiRequest;
 import reactor.core.publisher.Mono;
 
@@ -25,7 +27,10 @@ public class ProxyController {
 	@PostMapping("/proxy")
 	public Mono<ResponseEntity<String>> summaryCall(@RequestBody ESBApiRequest request) {
 		return Mono.just(ResponseEntity.accepted().body("Accept summary service call")).doOnSuccess(response -> {
-			client.callAsync(Unpooled.copiedBuffer(request.getBodyData(), ByteEncodingConstants.CHARSET));
+			client.callAsync(ByteBufUtils.addMessageLength(Unpooled.wrappedBuffer(
+					CommonHeaderParser.responseHeader(request.getHeaderMessage(), "0210", "000",
+							request.getTransactionId()),
+					Unpooled.copiedBuffer(request.getBodyMessage(), ByteEncodingConstants.CHARSET))));
 		});
 	}
 

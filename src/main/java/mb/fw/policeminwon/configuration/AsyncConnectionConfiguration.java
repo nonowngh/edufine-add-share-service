@@ -20,8 +20,10 @@ public class AsyncConnectionConfiguration {
 	
 	private int reconnectDelaySec;
 	
+	private boolean bypassTestCall = false;
+	
 	@Bean(initMethod = "start", destroyMethod = "shutdown")
     AsyncConnectionClient client() {
-    	return new AsyncConnectionClient(host, port, reconnectDelaySec);
+    	return new AsyncConnectionClient(host, port, reconnectDelaySec, bypassTestCall);
     }
 }

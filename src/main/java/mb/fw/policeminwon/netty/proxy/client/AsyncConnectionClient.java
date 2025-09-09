@@ -18,6 +18,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -26,11 +27,14 @@ public class AsyncConnectionClient {
 	private String host;
 	private int port;
 	private int reconnectDelaySec;
+	@Getter
+	private Boolean bypassTestCall;
 
-	public AsyncConnectionClient(String host, int port, int reconnectDelaySec) {
+	public AsyncConnectionClient(String host, int port, int reconnectDelaySec, Boolean bypassTestCall) {
 		this.host = host;
 		this.port = port;
 		this.reconnectDelaySec = reconnectDelaySec;
+		this.bypassTestCall = bypassTestCall;
 	}
 
 	private static EventLoopGroup group;

@@ -27,7 +27,7 @@ public class SummaryService {
 	}
 
 	public void doAsyncProcess(ESBApiRequest request) {
-		String elecPayNo =  ViewBillingDetailParser.toEntity(request.getBodyData()).getElecPayNo();
+		String elecPayNo =  ViewBillingDetailParser.toEntity(request.getBodyMessage()).getElecPayNo();
 		ViewBillingDetailEntity entity = viewBillingDetailMapper.selectBillingDetailByElecPayNo(elecPayNo);
 		if(entity == null) {
 			log.error("elecPayNo '{}' 해당하는 정보가 없음", elecPayNo);
@@ -36,7 +36,7 @@ public class SummaryService {
 		String returnMessage = ViewBillingDetailParser.toMessage(entity);
 
 		CompletableFuture.runAsync(() -> {
-			request.setBodyData(returnMessage);
+			request.setBodyMessage(returnMessage);
 
 			callBackWebClient.post().contentType(MediaType.APPLICATION_JSON).bodyValue(request).retrieve()
 					.toBodilessEntity().doOnSuccess(r -> log.info("Callback success"))
