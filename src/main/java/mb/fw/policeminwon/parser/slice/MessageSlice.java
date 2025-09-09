@@ -18,14 +18,24 @@ public class MessageSlice {
 	public static String getHeaderMessage(ByteBuf buf) {
 		return ByteBufUtils.getStringfromBytebuf(buf, 4, 70);
 	}
-	
+
 	// 전자납부번호(body index 0 ~ 19)
 	public static String getElecPayNo(ByteBuf buf) {
 		return ByteBufUtils.getStringfromBytebuf(buf, HEADER_LENGTH, 19);
 	}
 
-	// 바디 정보(body index 0 ~ 630)
+	// 바디 정보(body length 630)
 	public static String getVeiwBillingDetailTotalBody(ByteBuf buf) {
 		return ByteBufUtils.getStringfromBytebuf(buf, HEADER_LENGTH, 630);
+	}
+
+	// 바디 정보(body length 153)
+	public static String getPaymentResultNotificationTotalBody(ByteBuf buf) {
+		return ByteBufUtils.getStringfromBytebuf(buf, HEADER_LENGTH, 153);
+	}
+
+	// 바디 정보(body length 86)
+	public static String getCancelPaymentTotalBody(ByteBuf buf) {
+		return ByteBufUtils.getStringfromBytebuf(buf, HEADER_LENGTH, 86);
 	}
 }

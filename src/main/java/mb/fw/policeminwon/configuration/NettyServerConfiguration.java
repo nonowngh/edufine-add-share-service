@@ -1,5 +1,6 @@
 package mb.fw.policeminwon.configuration;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -33,8 +34,8 @@ public class NettyServerConfiguration {
 
 	@Bean(initMethod = "start", destroyMethod = "shutdown")
 	@ConditionalOnProperty(prefix = "tcp.server.proxy", name = "enabled", havingValue = "true")
-	ProxyServer proxyServer(AsyncConnectionClient client, @Qualifier("webClient") Optional<WebClient> optionalWebClient) {
-		return new ProxyServer(proxy.getBindPort(), client, optionalWebClient);
+	ProxyServer proxyServer(List<AsyncConnectionClient> clients, @Qualifier("webClient") Optional<WebClient> optionalWebClient) {
+		return new ProxyServer(proxy.getBindPort(), clients, optionalWebClient);
 	}
 
 //	@Bean(initMethod = "start", destroyMethod = "shutdown")

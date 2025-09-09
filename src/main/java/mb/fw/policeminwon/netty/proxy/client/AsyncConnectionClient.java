@@ -28,13 +28,13 @@ public class AsyncConnectionClient {
 	private int port;
 	private int reconnectDelaySec;
 	@Getter
-	private Boolean bypassTestCall;
+	private String systemCode;
 
-	public AsyncConnectionClient(String host, int port, int reconnectDelaySec, Boolean bypassTestCall) {
+	public AsyncConnectionClient(String systemCode, String host, int port, int reconnectDelaySec) {
+		this.systemCode = systemCode;
 		this.host = host;
 		this.port = port;
 		this.reconnectDelaySec = reconnectDelaySec;
-		this.bypassTestCall = bypassTestCall;
 	}
 
 	private static EventLoopGroup group;
@@ -141,5 +141,7 @@ public class AsyncConnectionClient {
 			}
 		}
 	}
+	
+	
 	
 }

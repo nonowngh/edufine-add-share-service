@@ -1,6 +1,7 @@
 package mb.fw.policeminwon.netty.proxy;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.web.reactive.function.client.WebClient;
@@ -11,23 +12,23 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import lombok.extern.slf4j.Slf4j;
+import mb.fw.policeminwon.constants.SystemCodeConstatns;
+import mb.fw.policeminwon.constants.TcpBodyConstatns;
 import mb.fw.policeminwon.constants.TcpHeaderSrFlag;
 import mb.fw.policeminwon.constants.TcpHeaderTransactionCode;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
-import mb.fw.policeminwon.parser.BodyCompareParser;
-import mb.fw.policeminwon.parser.CommonHeaderParser;
 import mb.fw.policeminwon.parser.slice.MessageSlice;
-import mb.fw.policeminwon.utils.ByteBufUtils;
+import mb.fw.policeminwon.utils.LogUtils;
 import mb.fw.policeminwon.web.dto.ESBApiRequest;
 
 @Slf4j
 public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 
-	private final AsyncConnectionClient client;
+	private final List<AsyncConnectionClient> clients;
 	private final WebClient webClient;
 
-	public ProxyServerHandler(AsyncConnectionClient client, WebClient webClient) {
-		this.client = client;
+	public ProxyServerHandler(List<AsyncConnectionClient> clients, WebClient webClient) {
+		this.clients = clients;
 		this.webClient = webClient;
 	}
 
@@ -38,16 +39,20 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			String transactionCode = MessageSlice.getTransactionCode(inBuf);
 			log.info("transactionCode -> [{}]", transactionCode);
 			String srFlag = MessageSlice.getSrFlag(inBuf);
+			String targetSystemCode = TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstatns.KFTC
+					: SystemCodeConstatns.TRAFFIC;
 
 			Map<String, Runnable> actions = new HashMap<>();
 			// 테스트 콜
-			actions.put(TcpHeaderTransactionCode.TEST_CALL, () -> testCall(inBuf));
+			actions.put(TcpHeaderTransactionCode.TEST_CALL, () -> testCall(inBuf, srFlag, transactionCode, targetSystemCode));
 			// 고지내역 상세조회
-			actions.put(TcpHeaderTransactionCode.VIEW_BILLING_DETAIL, () -> veiwBillingDetail(inBuf, srFlag));
+			actions.put(TcpHeaderTransactionCode.VIEW_BILLING_DETAIL,
+					() -> penaltyProcess(inBuf, srFlag, transactionCode, true, targetSystemCode));
 			// 납부결과 통지
-			actions.put(TcpHeaderTransactionCode.PAYMENT_RESULT_NOTIFICATION, () -> testCall(inBuf));
+			actions.put(TcpHeaderTransactionCode.PAYMENT_RESULT_NOTIFICATION,
+					() -> penaltyProcess(inBuf, srFlag, transactionCode, false, targetSystemCode));
 			// 납부 (재)취소
-			actions.put(TcpHeaderTransactionCode.CANCEL_PAYMENT, () -> testCall(inBuf));
+			actions.put(TcpHeaderTransactionCode.CANCEL_PAYMENT, () -> cancelProcess(inBuf, srFlag, transactionCode, targetSystemCode));
 
 			actions.getOrDefault(transactionCode, () -> {
 				throw new IllegalArgumentException("Invalid transaction-code -> " + transactionCode);
@@ -59,44 +64,34 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 		}
 	}
 
-	private void veiwBillingDetail(ByteBuf inBuf, String srFlag) {
-		String policeSystemCode = MessageSlice.getElecPayNo(inBuf);
-		if (policeSystemCode.startsWith(BodyCompareParser.getSJSElctNum())) {
-			if (TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag)) {
-				log.info("고지내역 상세조회...[{}] -> [{}]", "금결원", "즉심(SJS)");
-				esbApiCall(MessageSlice.getHeaderMessage(inBuf), MessageSlice.getVeiwBillingDetailTotalBody((inBuf)));
-			} else {
-				log.info("고지내역 상세조회...[{}] -> [{}]", "즉심(SJS)", "금결원");
-				client.callAsync(inBuf);
-			}
-		} else {
-			if (TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag)) {
-				log.info("고지내역 상세조회 - BYPASS...[{}] -> [{}]", "금결원", "교통(TCS)");
-			} else {
-				log.info("고지내역 상세조회 - BYPASS...[{}] -> [{}]", "교통(TCS)", "금결원");
-			}
-			client.callAsync(inBuf);
+	private void cancelProcess(ByteBuf inBuf, String srFlag, String transactionCode, String targetSystemCode) {
+		LogUtils.loggingLouteInfo(transactionCode, srFlag, false);
+		
+		getTcpClientAndSendMessage(targetSystemCode, inBuf);
+		if (!TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag)) {
+			esbApiCall(MessageSlice.getHeaderMessage(inBuf), MessageSlice.getCancelPaymentTotalBody((inBuf)));
 		}
 	}
 
-	private void testCall(ByteBuf inBuf) {
-//		log.info("테스트 콜...[{}] -> [{}]", "금결원", "프록시");
-//		if(client.getBypassTestCall()) client.callAsync(inBuf);
-//		else {
-//		ByteBuf outBuf = ByteBufUtils
-//				.addMessageLength(CommonHeaderParser.responseHeader(inBuf, "0810", "000", "testcall0123"));
-//		client.callAsync(outBuf);
-//		}
-		
-	    log.info("테스트 콜...[{}] -> [{}]", "금결원", "프록시");	    
-	    Runnable callAsync = () -> {
-	        ByteBuf outBuf = client.getBypassTestCall()
-	                ? inBuf
-	                : ByteBufUtils.addMessageLength(CommonHeaderParser.responseHeader(inBuf, "0810", "000", "testcall0123"));
-	        
-	        client.callAsync(outBuf);
-	    };	    
-	    callAsync.run();
+	private void penaltyProcess(ByteBuf inBuf, String srFlag, String transactionCode, boolean isBillingDetail, String targetSystemCode) {
+		String policeSystemCode = MessageSlice.getElecPayNo(inBuf);
+
+		if (policeSystemCode.startsWith(TcpBodyConstatns.getSJSElecNumType())) {
+			LogUtils.loggingLouteInfo(srFlag, transactionCode, true);
+			if (isBillingDetail)
+				esbApiCall(MessageSlice.getHeaderMessage(inBuf), MessageSlice.getVeiwBillingDetailTotalBody((inBuf)));
+			else
+				esbApiCall(MessageSlice.getHeaderMessage(inBuf),
+						MessageSlice.getPaymentResultNotificationTotalBody((inBuf)));
+		} else {
+			LogUtils.loggingLouteInfo(srFlag, transactionCode, false);
+			getTcpClientAndSendMessage(targetSystemCode, inBuf);
+		}
+	}
+
+	private void testCall(ByteBuf inBuf, String srFlag, String transactionCode, String targetSystemCode) {
+		LogUtils.loggingLouteInfo(srFlag, transactionCode, false);
+		getTcpClientAndSendMessage(targetSystemCode, inBuf);
 	}
 
 	private void esbApiCall(String header, String body) {
@@ -110,6 +105,16 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 		} else {
 			log.error("WebClient is NULL. check yaml file.");
 		}
+	}
+
+	private void getTcpClientAndSendMessage(String targetSystemCode, ByteBuf inBuf) {
+		AsyncConnectionClient asyncClient = clients.stream()
+				.filter(client -> client.getSystemCode().equals(targetSystemCode)).findFirst().orElse(null);
+		if (asyncClient == null) {
+			log.error("TCP 클라이언트를 찾을 수 없습니다. 시스템 코드: {}", targetSystemCode);
+			return;
+		}
+		asyncClient.callAsync(inBuf);
 	}
 
 	@Override

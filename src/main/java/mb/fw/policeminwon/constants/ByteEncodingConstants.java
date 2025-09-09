@@ -4,5 +4,9 @@ import java.nio.charset.Charset;
 
 public class ByteEncodingConstants {
 
-	 public static Charset CHARSET;
+	private ByteEncodingConstants() {
+	}
+
+	// tcp socket 통신을 위한 byte encoding 설정
+	public static Charset CHARSET;
 }

@@ -1,7 +1,9 @@
 package mb.fw.policeminwon.configuration;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -10,20 +12,28 @@ import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
 
 @Data
 @Configuration
-@ConfigurationProperties(prefix = "tcp.client.async-connction", ignoreUnknownFields = true)
 @ConditionalOnProperty(name = "tcp.client.async-connction.enabled", havingValue = "true")
 public class AsyncConnectionConfiguration {
 
-	private String host;
-	
-	private int port;
-	
-	private int reconnectDelaySec;
-	
-	private boolean bypassTestCall = false;
-	
+private final AsyncConnectionProperties asyncConnectionProperties;
+
+	public AsyncConnectionConfiguration(AsyncConnectionProperties asyncConnectionProperties) {
+		this.asyncConnectionProperties = asyncConnectionProperties;
+	}
+
 	@Bean(initMethod = "start", destroyMethod = "shutdown")
-    AsyncConnectionClient client() {
-    	return new AsyncConnectionClient(host, port, reconnectDelaySec, bypassTestCall);
-    }
+	List<AsyncConnectionClient> clients() {
+		return asyncConnectionProperties.getAsyncConnections().stream()
+				.map(asyncConnection -> new AsyncConnectionClient(
+						asyncConnection.getSystemCode(),
+						asyncConnection.getHost(), 
+						asyncConnection.getPort(),
+						asyncConnection.getReconnectDelaySec()))
+				.collect(Collectors.toList());
+	}
+
+//	@Bean(initMethod = "start", destroyMethod = "shutdown")
+//	AsyncConnectionClient client() {
+//		return new AsyncConnectionClient(host, port, reconnectDelaySec);
+//	}
 }

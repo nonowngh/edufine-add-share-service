@@ -1,5 +1,6 @@
 package mb.fw.policeminwon.netty.proxy;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.web.reactive.function.client.WebClient;
@@ -25,11 +26,12 @@ public class ProxyServer {
     private WebClient webClient;
     
 	private int bindPort;
-	private final AsyncConnectionClient client;
+    private final List<AsyncConnectionClient> clients;
+
 	
-	public ProxyServer(int bindPort, AsyncConnectionClient client, Optional<WebClient> optionalWebClient) {
+	public ProxyServer(int bindPort, List<AsyncConnectionClient> clients, Optional<WebClient> optionalWebClient) {
 		this.bindPort = bindPort;
-		this.client = client;
+		this.clients = clients;
 		this.webClient = optionalWebClient.orElse(null);;
 	}
 	
@@ -46,7 +48,7 @@ public class ProxyServer {
                      @Override
                      protected void initChannel(SocketChannel ch) {
 //                    	 ch.pipeline().addLast(new mb.fw.net.common.codec.LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4, true));
-                         ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO), new ProxyServerHandler(client, webClient));
+                         ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO), new ProxyServerHandler(clients, webClient));
                      }
                  });
 
