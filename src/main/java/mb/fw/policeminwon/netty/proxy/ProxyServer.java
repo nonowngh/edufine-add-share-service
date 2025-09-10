@@ -3,6 +3,8 @@ package mb.fw.policeminwon.netty.proxy;
 import java.util.List;
 import java.util.Optional;
 
+import javax.annotation.PreDestroy;
+
 import org.springframework.web.reactive.function.client.WebClient;
 
 import io.netty.bootstrap.ServerBootstrap;
@@ -67,6 +69,7 @@ public class ProxyServer {
         serverThread.start();
     }
 	
+	@PreDestroy
     public void shutdown() {
         if (bossGroup != null) bossGroup.shutdownGracefully();
         if (workerGroup != null) workerGroup.shutdownGracefully();

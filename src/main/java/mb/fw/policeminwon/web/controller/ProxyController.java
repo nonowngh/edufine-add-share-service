@@ -6,34 +6,33 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import io.netty.buffer.Unpooled;
-import lombok.extern.slf4j.Slf4j;
-import mb.fw.policeminwon.constants.ByteEncodingConstants;
-import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
-import mb.fw.policeminwon.parser.CommonHeaderParser;
-import mb.fw.policeminwon.utils.ByteBufUtils;
 import mb.fw.policeminwon.web.dto.ESBApiRequest;
+import mb.fw.policeminwon.web.service.ProxyService;
 import reactor.core.publisher.Mono;
 
-@Slf4j
 @RestController
 @RequestMapping("/esb/api")
 public class ProxyController {
 
-	private final AsyncConnectionClient client;
+	private final ProxyService proxyService;
 
-	public ProxyController(AsyncConnectionClient client) {
-		this.client = client;
+	public ProxyController(ProxyService proxyService) {
+		this.proxyService = proxyService;
 	}
 
-	@PostMapping("/proxy")
-	public Mono<ResponseEntity<String>> summaryCall(@RequestBody ESBApiRequest request) {
-		log.info("고지내역 상세조회 응답 - tcp send...[{}] -> [{}]", "즉심(SJS)", "금결원(KTF)");
-		return Mono.just(ResponseEntity.accepted().body("Accept summary service call")).doOnSuccess(response -> {
-			client.callAsync(ByteBufUtils.addMessageLength(Unpooled.wrappedBuffer(
-					CommonHeaderParser.responseHeader(request.getHeaderMessage(), "0210", "000",
-							request.getTransactionId()),
-					Unpooled.copiedBuffer(request.getBodyMessage(), ByteEncodingConstants.CHARSET))));
+	@PostMapping("/proxy/view-billing-detail")
+	public Mono<ResponseEntity<String>> viewBillingDetail(@RequestBody ESBApiRequest request) {
+		return Mono.just(ResponseEntity.accepted().body("Accept summary(ViewBillingDetail) service call")).doOnSuccess(response -> {
+			proxyService.sendResponseViewBillingDetail(request.getHeaderMessage(), request.getBodyMessage(),
+					request.getTransactionId());
+		});
+	}
+	
+	@PostMapping("/proxy/payment-result-notification")
+	public Mono<ResponseEntity<String>> paymentResultNotificaiton(@RequestBody ESBApiRequest request) {
+		return Mono.just(ResponseEntity.accepted().body("Accept summary(PaymentResultNotificaiton) service call")).doOnSuccess(response -> {
+			proxyService.sendResponsePaymentResultNotificaiton(request.getHeaderMessage(), request.getBodyMessage(),
+					request.getTransactionId());
 		});
 	}
 

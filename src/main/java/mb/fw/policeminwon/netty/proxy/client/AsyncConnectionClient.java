@@ -37,16 +37,16 @@ public class AsyncConnectionClient {
 		this.reconnectDelaySec = reconnectDelaySec;
 	}
 
-	private static EventLoopGroup group;
-	private static volatile Channel channel;
-	private static Bootstrap bootstrap;
+	private final EventLoopGroup group = new NioEventLoopGroup();
+	private volatile Channel channel;
+	private final Bootstrap bootstrap = new Bootstrap();
 
 	private final Semaphore connectionLimiter = new Semaphore(1);
 
 	public void start() {
-		group = new NioEventLoopGroup();
+		log.info("Loading async connection client [{} -> {}:{}, {} seconds(reconnect-delay-sec)]", systemCode, host,
+				port, reconnectDelaySec);
 
-		bootstrap = new Bootstrap();
 		bootstrap.group(group).channel(NioSocketChannel.class).handler(new ChannelInitializer<SocketChannel>() {
 			@Override
 			protected void initChannel(SocketChannel ch) {
@@ -60,6 +60,7 @@ public class AsyncConnectionClient {
 
 					@Override
 					public void channelInactive(ChannelHandlerContext ctx) {
+						log.info("Disconnect [{}] async-connection-client. channel-id : {}", systemCode, channel.id() );
 						scheduleReconnect();
 					}
 
@@ -75,9 +76,8 @@ public class AsyncConnectionClient {
 	}
 
 	public void shutdown() {
-		if (channel != null && channel.isActive())
-			channel.close();
-		group.shutdownGracefully();
+		if (channel != null)
+			group.shutdownGracefully();
 	}
 
 	private void doConnect() {
@@ -110,19 +110,18 @@ public class AsyncConnectionClient {
 		return (channel != null && channel.isActive()) ? channel : null;
 	}
 
-	
 	public ChannelFuture reconnectOnInactive() {
 		log.error("Disconnected from [{}:{}] server. Will attempt reconnect...", host, port);
-	    return bootstrap.connect(host, port).addListener((ChannelFutureListener) future -> {
-	        if (future.isSuccess()) {
-	            channel = future.channel();
+		return bootstrap.connect(host, port).addListener((ChannelFutureListener) future -> {
+			if (future.isSuccess()) {
+				channel = future.channel();
 				log.info("Connected to [{}:{}] server", host, port);
-	        } else {
-	            log.error("Reconnection failed");
-	        }
-	    });
+			} else {
+				log.error("Reconnection failed");
+			}
+		});
 	}
-	
+
 	public void callAsync(ByteBuf outBuf) {
 		try {
 			if (channel != null && channel.isActive()) {
@@ -141,7 +140,4 @@ public class AsyncConnectionClient {
 			}
 		}
 	}
-	
-	
-	
 }

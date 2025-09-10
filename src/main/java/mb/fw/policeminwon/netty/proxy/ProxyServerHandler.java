@@ -39,12 +39,13 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			String transactionCode = MessageSlice.getTransactionCode(inBuf);
 			log.info("transactionCode -> [{}]", transactionCode);
 			String srFlag = MessageSlice.getSrFlag(inBuf);
-			String targetSystemCode = TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstatns.KFTC
-					: SystemCodeConstatns.TRAFFIC;
+			String targetSystemCode = TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstatns.TRAFFIC
+					: SystemCodeConstatns.KFTC;
 
 			Map<String, Runnable> actions = new HashMap<>();
 			// 테스트 콜
-			actions.put(TcpHeaderTransactionCode.TEST_CALL, () -> testCall(inBuf, srFlag, transactionCode, targetSystemCode));
+			actions.put(TcpHeaderTransactionCode.TEST_CALL,
+					() -> testCall(inBuf, srFlag, transactionCode, targetSystemCode));
 			// 고지내역 상세조회
 			actions.put(TcpHeaderTransactionCode.VIEW_BILLING_DETAIL,
 					() -> penaltyProcess(inBuf, srFlag, transactionCode, true, targetSystemCode));
@@ -52,7 +53,8 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			actions.put(TcpHeaderTransactionCode.PAYMENT_RESULT_NOTIFICATION,
 					() -> penaltyProcess(inBuf, srFlag, transactionCode, false, targetSystemCode));
 			// 납부 (재)취소
-			actions.put(TcpHeaderTransactionCode.CANCEL_PAYMENT, () -> cancelProcess(inBuf, srFlag, transactionCode, targetSystemCode));
+			actions.put(TcpHeaderTransactionCode.CANCEL_PAYMENT,
+					() -> cancelProcess(inBuf, srFlag, transactionCode, targetSystemCode));
 
 			actions.getOrDefault(transactionCode, () -> {
 				throw new IllegalArgumentException("Invalid transaction-code -> " + transactionCode);
@@ -66,31 +68,32 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 
 	private void cancelProcess(ByteBuf inBuf, String srFlag, String transactionCode, String targetSystemCode) {
 		LogUtils.loggingLouteInfo(transactionCode, srFlag, false);
-		
+
 		getTcpClientAndSendMessage(targetSystemCode, inBuf);
 		if (!TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag)) {
 			esbApiCall(MessageSlice.getHeaderMessage(inBuf), MessageSlice.getCancelPaymentTotalBody((inBuf)));
 		}
 	}
 
-	private void penaltyProcess(ByteBuf inBuf, String srFlag, String transactionCode, boolean isBillingDetail, String targetSystemCode) {
+	private void penaltyProcess(ByteBuf inBuf, String srFlag, String transactionCode, boolean isBillingDetail,
+			String targetSystemCode) {
 		String policeSystemCode = MessageSlice.getElecPayNo(inBuf);
 
 		if (policeSystemCode.startsWith(TcpBodyConstatns.getSJSElecNumType())) {
-			LogUtils.loggingLouteInfo(srFlag, transactionCode, true);
+			LogUtils.loggingLouteInfo(transactionCode, srFlag, true);
 			if (isBillingDetail)
 				esbApiCall(MessageSlice.getHeaderMessage(inBuf), MessageSlice.getVeiwBillingDetailTotalBody((inBuf)));
 			else
 				esbApiCall(MessageSlice.getHeaderMessage(inBuf),
 						MessageSlice.getPaymentResultNotificationTotalBody((inBuf)));
 		} else {
-			LogUtils.loggingLouteInfo(srFlag, transactionCode, false);
+			LogUtils.loggingLouteInfo(transactionCode, srFlag, false);
 			getTcpClientAndSendMessage(targetSystemCode, inBuf);
 		}
 	}
 
 	private void testCall(ByteBuf inBuf, String srFlag, String transactionCode, String targetSystemCode) {
-		LogUtils.loggingLouteInfo(srFlag, transactionCode, false);
+		LogUtils.loggingLouteInfo(transactionCode, srFlag, false);
 		getTcpClientAndSendMessage(targetSystemCode, inBuf);
 	}
 
@@ -109,11 +112,8 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 
 	private void getTcpClientAndSendMessage(String targetSystemCode, ByteBuf inBuf) {
 		AsyncConnectionClient asyncClient = clients.stream()
-				.filter(client -> client.getSystemCode().equals(targetSystemCode)).findFirst().orElse(null);
-		if (asyncClient == null) {
-			log.error("TCP 클라이언트를 찾을 수 없습니다. 시스템 코드: {}", targetSystemCode);
-			return;
-		}
+				.filter(client -> client.getSystemCode().equals(targetSystemCode)).findFirst()
+				.orElseThrow(() -> new IllegalStateException("Tcp 클라이언트를 찾을 수 없습니다. 시스템 코드: " + targetSystemCode));
 		asyncClient.callAsync(inBuf);
 	}
 

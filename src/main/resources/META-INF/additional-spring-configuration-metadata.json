@@ -38,5 +38,15 @@
     "name": "tcp.client.async-connction.bypass",
     "type": "java.lang.String",
     "description": "A description for 'tcp.client.async-connction.bypass'"
+  },
+  {
+    "name": "tcp.client.async-connction.async-connctions",
+    "type": "java.lang.String",
+    "description": "A description for 'tcp.client.async-connction.async-connctions'"
+  },
+  {
+    "name": "tcp.client.async-connction.connctions",
+    "type": "java.lang.String",
+    "description": "A description for 'tcp.client.async-connction.connctions'"
   }
 ]}

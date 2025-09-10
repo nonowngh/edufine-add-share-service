@@ -12,13 +12,13 @@ import lombok.Data;
 @ConfigurationProperties(prefix = "tcp.client.async-connction", ignoreUnknownFields = true)
 public class AsyncConnectionProperties {
 
-	private List<AsyncConnection> asyncConnections;
+	private List<AsyncConnection> connections;
 
 	@Data
 	public static class AsyncConnection {
 		private String systemCode;
 		private String host;
 		private int port;
-		private int reconnectDelaySec;
+		private int reconnectDelaySec = 30;
 	}
 }

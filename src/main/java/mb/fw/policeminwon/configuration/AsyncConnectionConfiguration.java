@@ -15,21 +15,20 @@ import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
 @ConditionalOnProperty(name = "tcp.client.async-connction.enabled", havingValue = "true")
 public class AsyncConnectionConfiguration {
 
-private final AsyncConnectionProperties asyncConnectionProperties;
+	private final AsyncConnectionProperties asyncConnectionProperties;
 
 	public AsyncConnectionConfiguration(AsyncConnectionProperties asyncConnectionProperties) {
 		this.asyncConnectionProperties = asyncConnectionProperties;
 	}
 
-	@Bean(initMethod = "start", destroyMethod = "shutdown")
+	@Bean
 	List<AsyncConnectionClient> clients() {
-		return asyncConnectionProperties.getAsyncConnections().stream()
-				.map(asyncConnection -> new AsyncConnectionClient(
-						asyncConnection.getSystemCode(),
-						asyncConnection.getHost(), 
-						asyncConnection.getPort(),
-						asyncConnection.getReconnectDelaySec()))
-				.collect(Collectors.toList());
+		return asyncConnectionProperties.getConnections().stream().map(asyncConnection -> {
+			AsyncConnectionClient client = new AsyncConnectionClient(asyncConnection.getSystemCode(),
+					asyncConnection.getHost(), asyncConnection.getPort(), asyncConnection.getReconnectDelaySec());
+			client.start();
+			return client;
+		}).collect(Collectors.toList());
 	}
 
 //	@Bean(initMethod = "start", destroyMethod = "shutdown")

@@ -9,8 +9,8 @@ import mb.fw.policeminwon.constants.TcpHeaderTransactionCode;
 public class LogUtils {
 
 	public static void loggingLouteInfo(String transactionCode, String srFlag, boolean isSummray) {
-		String targetSystemCode = TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstatns.KFTC
-				: SystemCodeConstatns.TRAFFIC;
+		String targetSystemCode = TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstatns.TRAFFIC
+				: SystemCodeConstatns.KFTC;
 		String from = targetSystemCode.equals(SystemCodeConstatns.KFTC) ? "교통(TCS)" : "금결원(KFT)";
 		String to = targetSystemCode.equals(SystemCodeConstatns.KFTC) ? "금결원(KFT)" : "교통(TCS)";
 		String reqOrRes = targetSystemCode.equals(SystemCodeConstatns.KFTC) ? "응답" : "요청";
