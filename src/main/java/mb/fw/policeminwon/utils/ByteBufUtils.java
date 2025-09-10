@@ -25,14 +25,12 @@ public class ByteBufUtils {
 	public static int setStringAndMoveOffset(Consumer<String> setter, ByteBuf buf, int start, int length) {
 	    int end = start + length;
 	    setter.accept(ByteBufUtils.getStringValuefromByteBuf(buf, start, length));
-	    System.out.println(ByteBufUtils.getStringValuefromByteBuf(buf, start, length));
 	    return end;
 	}
 	
 	public static int setIntegerAndMoveOffset(Consumer<Integer> setter, ByteBuf buf, int start, int length) {
 	    int end = start + length;
 	    setter.accept(ByteBufUtils.getIntegerValuefromByteBuf(buf, start, length));
-	    System.out.println(ByteBufUtils.getIntegerValuefromByteBuf(buf, start, length));
 	    return end;
 	}
 	

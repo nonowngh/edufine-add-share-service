@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import mb.fw.policeminwon.constants.ESBAPIContextPathConstants;
 import mb.fw.policeminwon.web.dto.ESBApiRequest;
 import mb.fw.policeminwon.web.service.SummaryService;
 import reactor.core.publisher.Mono;
@@ -20,10 +21,16 @@ public class SummaryController {
 		this.summaryService = summaryService;
 	}
 
-	@PostMapping("/summary")
-	public Mono<ResponseEntity<String>> summaryCall(@RequestBody ESBApiRequest request) {
-		summaryService.doAsyncProcess(request);
-		return Mono.just(ResponseEntity.accepted().body("Accept summary service call [" + request.getTransactionId() + "]"));
+	@PostMapping("/summary" + ESBAPIContextPathConstants.VIEW_VIEW_BILLING_DETAIL)
+	public Mono<ResponseEntity<String>> viewBillingDetail(@RequestBody ESBApiRequest request) {
+		summaryService.doAsyncViewBillingDetail(request);
+		return Mono.just(ResponseEntity.accepted().body("Accept summary(ViewBillingDetail) service call [" + request.getTransactionId() + "]"));
+	}
+	
+	@PostMapping("/summary" + ESBAPIContextPathConstants.PAYMENT_RESULT_NOTIFICATION)
+	public Mono<ResponseEntity<String>> paymentResultNotificaiton(@RequestBody ESBApiRequest request) {
+		summaryService.doAsyncPaymentResultNotification(request);
+		return Mono.just(ResponseEntity.accepted().body("Accept summary(paymentResultNotificaiton) service call [" + request.getTransactionId() + "]"));
 	}
 
 }

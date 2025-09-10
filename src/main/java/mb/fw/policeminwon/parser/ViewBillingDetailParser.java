@@ -15,6 +15,7 @@ public class ViewBillingDetailParser {
 	public static ViewBillingDetailEntity toEntity(String data) {
 		ByteBuf buf = Unpooled.copiedBuffer(data, ByteEncodingConstants.CHARSET);
 		ViewBillingDetailEntity entity = new ViewBillingDetailEntity();
+		System.out.println(buf.readableBytes());
 		int offset = 0;
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setElecPayNo, buf, offset, 19); // 전자납부번호 (AN, 19)
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setReserveField1, buf, offset, 20); // 예비 정보 FIELD 1 (AN, 20)
@@ -51,7 +52,7 @@ public class ViewBillingDetailParser {
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setObligorName, buf, offset, 8); // 납부의무자 성명 (AN, 8)
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setCardPayYn, buf, offset, 1); // 신용카드 납부 제하 여부 (AN, 1)
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setReserveField6, buf, offset, 18); // 예비 정보 FIELD 6 (AN, 18)
-		}catch(Exception e) {
+		}catch(IndexOutOfBoundsException e) {
 			log.warn("byte index error...rest field skip -> " + e.getMessage());
 		}
 		return entity;

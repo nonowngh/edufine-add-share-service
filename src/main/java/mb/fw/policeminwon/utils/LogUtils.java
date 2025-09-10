@@ -17,8 +17,8 @@ public class LogUtils {
 		if (isSummray) {
 			from = targetSystemCode.equals(SystemCodeConstatns.KFTC) ? "즉심(SJS)" : "금결원(KFT)";
 			to = targetSystemCode.equals(SystemCodeConstatns.KFTC) ? "금결원(KFT)" : "즉심(SJS)";
-			targetSystemCode = TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstatns.KFTC
-					: SystemCodeConstatns.SUMMRAY;
+			targetSystemCode = TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstatns.SUMMRAY
+					: SystemCodeConstatns.KFTC;
 		}
 		switch (transactionCode) {
 		case TcpHeaderTransactionCode.TEST_CALL:

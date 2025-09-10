@@ -12,6 +12,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import lombok.extern.slf4j.Slf4j;
+import mb.fw.policeminwon.constants.ESBAPIContextPathConstants;
 import mb.fw.policeminwon.constants.SystemCodeConstatns;
 import mb.fw.policeminwon.constants.TcpBodyConstatns;
 import mb.fw.policeminwon.constants.TcpHeaderSrFlag;
@@ -71,7 +72,8 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 
 		getTcpClientAndSendMessage(targetSystemCode, inBuf);
 		if (!TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag)) {
-			esbApiCall(MessageSlice.getHeaderMessage(inBuf), MessageSlice.getCancelPaymentTotalBody((inBuf)));
+			esbApiCall(MessageSlice.getHeaderMessage(inBuf), MessageSlice.getCancelPaymentTotalBody((inBuf)),
+					ESBAPIContextPathConstants.CANCEL_PAYMENT);
 		}
 	}
 
@@ -82,10 +84,12 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 		if (policeSystemCode.startsWith(TcpBodyConstatns.getSJSElecNumType())) {
 			LogUtils.loggingLouteInfo(transactionCode, srFlag, true);
 			if (isBillingDetail)
-				esbApiCall(MessageSlice.getHeaderMessage(inBuf), MessageSlice.getVeiwBillingDetailTotalBody((inBuf)));
+				esbApiCall(MessageSlice.getHeaderMessage(inBuf), MessageSlice.getVeiwBillingDetailTotalBody((inBuf)),
+						ESBAPIContextPathConstants.VIEW_VIEW_BILLING_DETAIL);
 			else
 				esbApiCall(MessageSlice.getHeaderMessage(inBuf),
-						MessageSlice.getPaymentResultNotificationTotalBody((inBuf)));
+						MessageSlice.getPaymentResultNotificationTotalBody((inBuf)),
+						ESBAPIContextPathConstants.PAYMENT_RESULT_NOTIFICATION);
 		} else {
 			LogUtils.loggingLouteInfo(transactionCode, srFlag, false);
 			getTcpClientAndSendMessage(targetSystemCode, inBuf);
@@ -97,10 +101,11 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 		getTcpClientAndSendMessage(targetSystemCode, inBuf);
 	}
 
-	private void esbApiCall(String header, String body) {
+	private void esbApiCall(String header, String body, String contextPath) {
 		if (webClient != null) {
-			webClient.post().bodyValue(ESBApiRequest.builder().headerMessage(header).bodyMessage(body).build())
-					.retrieve().bodyToMono(String.class).doOnNext(response -> {
+			webClient.post().uri(contextPath)
+					.bodyValue(ESBApiRequest.builder().headerMessage(header).bodyMessage(body).build()).retrieve()
+					.bodyToMono(String.class).doOnNext(response -> {
 						log.info("API 응답: " + response);
 					}).doOnError(error -> {
 						log.error("API 오류: " + error.getMessage());

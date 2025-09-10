@@ -26,16 +26,16 @@ public class MessageSlice {
 
 	// 바디 정보(body length 630)
 	public static String getVeiwBillingDetailTotalBody(ByteBuf buf) {
-		return ByteBufUtils.getStringfromBytebuf(buf, HEADER_LENGTH, 630);
+		return ByteBufUtils.getStringfromBytebuf(buf, HEADER_LENGTH, buf.readableBytes() - HEADER_LENGTH);
 	}
 
 	// 바디 정보(body length 153)
 	public static String getPaymentResultNotificationTotalBody(ByteBuf buf) {
-		return ByteBufUtils.getStringfromBytebuf(buf, HEADER_LENGTH, 153);
+		return ByteBufUtils.getStringfromBytebuf(buf, HEADER_LENGTH, buf.readableBytes() - HEADER_LENGTH);
 	}
 
 	// 바디 정보(body length 86)
 	public static String getCancelPaymentTotalBody(ByteBuf buf) {
-		return ByteBufUtils.getStringfromBytebuf(buf, HEADER_LENGTH, 86);
+		return ByteBufUtils.getStringfromBytebuf(buf, HEADER_LENGTH, buf.readableBytes() - HEADER_LENGTH);
 	}
 }
