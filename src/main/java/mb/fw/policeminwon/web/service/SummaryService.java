@@ -5,6 +5,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -20,6 +21,7 @@ import mb.fw.policeminwon.web.mapper.ViewBillingDetailMapper;
 
 @lombok.extern.slf4j.Slf4j
 @Service
+@Profile("summary")
 public class SummaryService {
 
 	private final WebClient callBackWebClient;

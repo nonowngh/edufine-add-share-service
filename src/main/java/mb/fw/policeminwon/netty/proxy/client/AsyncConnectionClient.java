@@ -3,6 +3,8 @@ package mb.fw.policeminwon.netty.proxy.client;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.PreDestroy;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -75,7 +77,9 @@ public class AsyncConnectionClient {
 		doConnect();
 	}
 
+	@PreDestroy
 	public void shutdown() {
+		log.info("Shutdown AsyncConnectionClient...");
 		if (channel != null)
 			group.shutdownGracefully();
 	}

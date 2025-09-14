@@ -17,9 +17,10 @@ import mb.fw.policeminwon.constants.SystemCodeConstatns;
 import mb.fw.policeminwon.constants.TcpBodyConstatns;
 import mb.fw.policeminwon.constants.TcpHeaderSrFlag;
 import mb.fw.policeminwon.constants.TcpHeaderTransactionCode;
+import mb.fw.policeminwon.filter.ActionLoggingFilter;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
 import mb.fw.policeminwon.parser.slice.MessageSlice;
-import mb.fw.policeminwon.utils.LogUtils;
+import mb.fw.policeminwon.spec.InterfaceInfoList;
 import mb.fw.policeminwon.web.dto.ESBApiRequest;
 
 @Slf4j
@@ -27,10 +28,13 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 
 	private final List<AsyncConnectionClient> clients;
 	private final WebClient webClient;
+	private final InterfaceInfoList interfaceInfoList;
 
-	public ProxyServerHandler(List<AsyncConnectionClient> clients, WebClient webClient) {
+	public ProxyServerHandler(List<AsyncConnectionClient> clients, WebClient webClient,
+			InterfaceInfoList interfaceInfoList) {
 		this.clients = clients;
 		this.webClient = webClient;
+		this.interfaceInfoList = interfaceInfoList;
 	}
 
 	@Override
@@ -43,33 +47,33 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			String targetSystemCode = TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstatns.TRAFFIC
 					: SystemCodeConstatns.KFTC;
 
+//			InterfaceInfo interfaceInfo = interfaceInfoList.findInterfaceInfo(transactionCode, srFlag, transactionCode);
+
 			Map<String, Runnable> actions = new HashMap<>();
 			// 테스트 콜
-			actions.put(TcpHeaderTransactionCode.TEST_CALL,
-					() -> testCall(inBuf, srFlag, transactionCode, targetSystemCode));
+			actions.put(TcpHeaderTransactionCode.TEST_CALL, () -> testCall(inBuf, targetSystemCode));
 			// 고지내역 상세조회
 			actions.put(TcpHeaderTransactionCode.VIEW_BILLING_DETAIL,
-					() -> penaltyProcess(inBuf, srFlag, transactionCode, true, targetSystemCode));
+					() -> penaltyProcess(inBuf, true, targetSystemCode));
 			// 납부결과 통지
 			actions.put(TcpHeaderTransactionCode.PAYMENT_RESULT_NOTIFICATION,
-					() -> penaltyProcess(inBuf, srFlag, transactionCode, false, targetSystemCode));
+					() -> penaltyProcess(inBuf, false, targetSystemCode));
 			// 납부 (재)취소
-			actions.put(TcpHeaderTransactionCode.CANCEL_PAYMENT,
-					() -> cancelProcess(inBuf, srFlag, transactionCode, targetSystemCode));
+			actions.put(TcpHeaderTransactionCode.CANCEL_PAYMENT, () -> cancelProcess(inBuf, srFlag, targetSystemCode));
 
-			actions.getOrDefault(transactionCode, () -> {
+			Runnable action = actions.getOrDefault(transactionCode, () -> {
 				throw new IllegalArgumentException("Invalid transaction-code -> " + transactionCode);
-			}).run();
+			});
 
+			Runnable filteredAction = ActionLoggingFilter.routeLoggingFilter(action, transactionCode, inBuf);
+			filteredAction.run();
 		} finally {
 			if (((ReferenceCounted) msg).refCnt() > 0)
 				ReferenceCountUtil.release(msg);
 		}
 	}
 
-	private void cancelProcess(ByteBuf inBuf, String srFlag, String transactionCode, String targetSystemCode) {
-		LogUtils.loggingLouteInfo(transactionCode, srFlag, false);
-
+	private void cancelProcess(ByteBuf inBuf, String srFlag, String targetSystemCode) {
 		getTcpClientAndSendMessage(targetSystemCode, inBuf);
 		if (!TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag)) {
 			esbApiCall(MessageSlice.getHeaderMessage(inBuf), MessageSlice.getCancelPaymentTotalBody((inBuf)),
@@ -77,12 +81,10 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 		}
 	}
 
-	private void penaltyProcess(ByteBuf inBuf, String srFlag, String transactionCode, boolean isBillingDetail,
-			String targetSystemCode) {
+	private void penaltyProcess(ByteBuf inBuf, boolean isBillingDetail, String targetSystemCode) {
 		String policeSystemCode = MessageSlice.getElecPayNo(inBuf);
 
 		if (policeSystemCode.startsWith(TcpBodyConstatns.getSJSElecNumType())) {
-			LogUtils.loggingLouteInfo(transactionCode, srFlag, true);
 			if (isBillingDetail)
 				esbApiCall(MessageSlice.getHeaderMessage(inBuf), MessageSlice.getVeiwBillingDetailTotalBody((inBuf)),
 						ESBAPIContextPathConstants.VIEW_VIEW_BILLING_DETAIL);
@@ -91,13 +93,11 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 						MessageSlice.getPaymentResultNotificationTotalBody((inBuf)),
 						ESBAPIContextPathConstants.PAYMENT_RESULT_NOTIFICATION);
 		} else {
-			LogUtils.loggingLouteInfo(transactionCode, srFlag, false);
 			getTcpClientAndSendMessage(targetSystemCode, inBuf);
 		}
 	}
 
-	private void testCall(ByteBuf inBuf, String srFlag, String transactionCode, String targetSystemCode) {
-		LogUtils.loggingLouteInfo(transactionCode, srFlag, false);
+	private void testCall(ByteBuf inBuf, String targetSystemCode) {
 		getTcpClientAndSendMessage(targetSystemCode, inBuf);
 	}
 

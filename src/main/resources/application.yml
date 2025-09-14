@@ -5,7 +5,6 @@ web:
   client:
     enabled: true
     target-url: http://localhost:28000/esb/api/summary
-    call-back-url: http://localhost:28000/esb/api/proxy
 
 tcp:
   server:
@@ -25,17 +24,10 @@ tcp:
           port: 7777
           reconnect-delay-sec: 30
 spring:
-#  datasource:
-#    url: jdbc:h2:tcp://localhost:9092/./data/demo
-#    driver-class-name: org.h2.Driver
-#    username: ENC(TdkY5c5vuDw4llaCxKBir12X/yRhf2xBZAnzN6m+ZioVuqFz+5Z8QJN30jsrhwDT)
-#    password: ENC(I1YqvtB1542Z7FFWOIrm595nSO7jMF0kvOhiULJgu7URunH0MPLNAJQIwKeuTQXJ)
+  profiles:
+    active: proxy
   main:
     allow-bean-definition-overriding: true
-mybatis:
-  mapper-locations: classpath:ViewBillingDetailMapper.xml
-  type-aliases-package: mb.fw.policeminwon.entity
-  map-underscore-to-camel-case: true
-#  autoconfigure:
-#    exclude:
-#      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration

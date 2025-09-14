@@ -13,6 +13,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import lombok.Data;
 import mb.fw.policeminwon.netty.proxy.ProxyServer;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
+import mb.fw.policeminwon.spec.InterfaceInfoList;
 
 @Data
 @Configuration
@@ -34,8 +35,8 @@ public class NettyServerConfiguration {
 
 	@Bean(initMethod = "start", destroyMethod = "shutdown")
 	@ConditionalOnProperty(prefix = "tcp.server.proxy", name = "enabled", havingValue = "true")
-	ProxyServer proxyServer(List<AsyncConnectionClient> clients, @Qualifier("webClient") Optional<WebClient> optionalWebClient) {
-		return new ProxyServer(proxy.getBindPort(), clients, optionalWebClient);
+	ProxyServer proxyServer(List<AsyncConnectionClient> clients, @Qualifier("webClient") Optional<WebClient> optionalWebClient, InterfaceInfoList interfaceInfoList) {
+		return new ProxyServer(proxy.getBindPort(), clients, optionalWebClient, interfaceInfoList);
 	}
 
 //	@Bean(initMethod = "start", destroyMethod = "shutdown")

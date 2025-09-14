@@ -3,8 +3,6 @@ package mb.fw.policeminwon.netty.proxy;
 import java.util.List;
 import java.util.Optional;
 
-import javax.annotation.PreDestroy;
-
 import org.springframework.web.reactive.function.client.WebClient;
 
 import io.netty.bootstrap.ServerBootstrap;
@@ -18,6 +16,7 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
+import mb.fw.policeminwon.spec.InterfaceInfoList;
 
 @Slf4j
 public class ProxyServer {
@@ -29,12 +28,13 @@ public class ProxyServer {
     
 	private int bindPort;
     private final List<AsyncConnectionClient> clients;
-
+    private InterfaceInfoList interfaceInfoList;
 	
-	public ProxyServer(int bindPort, List<AsyncConnectionClient> clients, Optional<WebClient> optionalWebClient) {
+	public ProxyServer(int bindPort, List<AsyncConnectionClient> clients, Optional<WebClient> optionalWebClient, InterfaceInfoList interfaceInfoList) {
 		this.bindPort = bindPort;
 		this.clients = clients;
-		this.webClient = optionalWebClient.orElse(null);;
+		this.webClient = optionalWebClient.orElse(null);
+		this.interfaceInfoList = interfaceInfoList;
 	}
 	
 	public void start() {
@@ -50,7 +50,7 @@ public class ProxyServer {
                      @Override
                      protected void initChannel(SocketChannel ch) {
 //                    	 ch.pipeline().addLast(new mb.fw.net.common.codec.LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4, true));
-                         ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO), new ProxyServerHandler(clients, webClient));
+                         ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO), new ProxyServerHandler(clients, webClient, interfaceInfoList));
                      }
                  });
 
@@ -69,11 +69,10 @@ public class ProxyServer {
         serverThread.start();
     }
 	
-	@PreDestroy
     public void shutdown() {
+		log.info("Shutdown police-minwon-tcp-proxy-server");
         if (bossGroup != null) bossGroup.shutdownGracefully();
         if (workerGroup != null) workerGroup.shutdownGracefully();
-        log.info("suhyup-tcp-server shutdown");
     }
 
 }

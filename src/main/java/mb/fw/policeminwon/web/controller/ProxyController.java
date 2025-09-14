@@ -1,5 +1,6 @@
 package mb.fw.policeminwon.web.controller;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -11,6 +12,7 @@ import mb.fw.policeminwon.web.dto.ESBApiRequest;
 import mb.fw.policeminwon.web.service.ProxyService;
 import reactor.core.publisher.Mono;
 
+@Profile("proxy")
 @RestController
 @RequestMapping("/esb/api")
 public class ProxyController {

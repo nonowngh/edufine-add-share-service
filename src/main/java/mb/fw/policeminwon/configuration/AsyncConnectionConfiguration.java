@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 
 import lombok.Data;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
@@ -21,6 +22,7 @@ public class AsyncConnectionConfiguration {
 		this.asyncConnectionProperties = asyncConnectionProperties;
 	}
 
+	@Lazy
 	@Bean
 	List<AsyncConnectionClient> clients() {
 		return asyncConnectionProperties.getConnections().stream().map(asyncConnection -> {

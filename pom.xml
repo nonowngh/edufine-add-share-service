@@ -231,12 +231,7 @@
 			<artifactId>opentelemetry-sdk</artifactId>
 			<version>1.30.0</version>
 		</dependency>
-		<dependency>
-		    <groupId>com.h2database</groupId>
-		    <artifactId>h2</artifactId>
-		</dependency>
 	</dependencies>
-
 
 	<build>
 		<plugins>
@@ -251,6 +246,12 @@
 						</exclude>
 					</excludes>
 					<excludeDevtools>false</excludeDevtools>
+					<includes>
+						<include>
+							<groupId>aaa</groupId>
+							<artifactId>aaa</artifactId>
+						</include>
+					</includes>
 				</configuration>
 			</plugin>
 			<plugin>

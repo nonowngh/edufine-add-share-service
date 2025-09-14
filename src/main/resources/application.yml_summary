@@ -1,0 +1,22 @@
+server:
+  port: 28000
+
+web:
+  client:
+    enabled: true
+    call-back-url: http://localhost:28000/esb/api/proxy
+
+spring:
+  profiles:
+    active: summary
+  datasource:
+    url: jdbc:h2:tcp://localhost:9092/./data/demo
+    driver-class-name: org.h2.Driver
+    username: ENC(TdkY5c5vuDw4llaCxKBir12X/yRhf2xBZAnzN6m+ZioVuqFz+5Z8QJN30jsrhwDT)
+    password: ENC(I1YqvtB1542Z7FFWOIrm595nSO7jMF0kvOhiULJgu7URunH0MPLNAJQIwKeuTQXJ)
+  main:
+    allow-bean-definition-overriding: true
+mybatis:
+  mapper-locations: classpath:ViewBillingDetailMapper.xml
+  type-aliases-package: mb.fw.policeminwon.entity
+

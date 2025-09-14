@@ -12,7 +12,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @ImportResource({"classpath:bean.xml"})
 @EnableScheduling
-@SpringBootApplication
+//@SpringBootApplication
 @Slf4j
 @ComponentScan(basePackages = {"mb.fw.atb", "mb.fw.adaptor"})
 public class AtbApplication {
