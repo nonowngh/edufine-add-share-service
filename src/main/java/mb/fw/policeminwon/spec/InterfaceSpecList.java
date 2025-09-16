@@ -7,14 +7,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 @Data
-public class InterfaceInfoList {
+public class InterfaceSpecList {
 	@JsonProperty("interfaceInfo")
-	private List<InterfaceInfo> interfaceInfo;
+	private List<InterfaceSpec> interfaceInfo;
 
 	/**
 	 * sndCode, rcvCode, messageCode에 맞는 InterfaceInfo 찾기
 	 */
-	public InterfaceInfo findInterfaceInfo(String sndCode, String rcvCode, String messageCode) {
+	public InterfaceSpec findInterfaceInfo(String sndCode, String rcvCode, String messageCode) {
 		return interfaceInfo.stream()
 				.filter(info -> info.getSndCode().equals(sndCode) && info.getRcvCode().equals(rcvCode)
 						&& info.getMessageCode().equals(messageCode))

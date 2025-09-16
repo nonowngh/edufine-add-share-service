@@ -9,26 +9,27 @@ import org.springframework.core.io.Resource;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
-import mb.fw.policeminwon.spec.InterfaceInfoList;
+import mb.fw.policeminwon.spec.InterfaceSpecList;
 
 @Profile("proxy")
 @Slf4j
 @Configuration
-public class InterfaceInfoConfiguration {
+public class InterfaceSpecConfiguration {
 
-	private InterfaceInfoList interfaceInfoList;
+	private InterfaceSpecList interfaceSpecList;
 
-	@Value("classpath:interface_info.json")
+	@Value("classpath:interface_spec.json")
 	Resource jsonFile;
 
 	@Bean
-	InterfaceInfoList initInterfaceInfo() {
+	InterfaceSpecList initInterSpecInfo() {
 		ObjectMapper objectMapper = new ObjectMapper();
 		try {
-			interfaceInfoList = objectMapper.readValue(jsonFile.getInputStream(), InterfaceInfoList.class);
+			interfaceSpecList = objectMapper.readValue(jsonFile.getInputStream(), InterfaceSpecList.class);
+			log.info("Loading interfaceList -> {}", interfaceSpecList);
 		} catch (Exception e) {
-			log.error("deserialize 'interface_info.json' file error!", e);
+			log.error("deserialize interface configure file error! check setting 'interface_spec.json'", e);
 		}
-		return interfaceInfoList;
+		return interfaceSpecList;
 	}
 }

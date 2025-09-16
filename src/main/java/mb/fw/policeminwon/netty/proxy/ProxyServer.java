@@ -16,66 +16,76 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
+import mb.fw.policeminwon.constants.TcpMessageLoggingConstants;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
-import mb.fw.policeminwon.spec.InterfaceInfoList;
+import mb.fw.policeminwon.spec.InterfaceSpecList;
 
 @Slf4j
 public class ProxyServer {
 
 	private EventLoopGroup bossGroup;
-    private EventLoopGroup workerGroup;
-    
-    private WebClient webClient;
-    private JmsTemplate jmsTemplate;
-    
+	private EventLoopGroup workerGroup;
+
+	private WebClient webClient;
+	private JmsTemplate jmsTemplate;
+
 	private int bindPort;
-    private final List<AsyncConnectionClient> clients;
-    private InterfaceInfoList interfaceInfoList;
-	
-	public ProxyServer(int bindPort, List<AsyncConnectionClient> clients, Optional<WebClient> optionalWebClient, InterfaceInfoList interfaceInfoList, Optional<JmsTemplate> optionalJmsTemplate) {
+	private final List<AsyncConnectionClient> clients;
+	private InterfaceSpecList interfaceSpecList;
+	private String directTestCallReturn;
+
+	public ProxyServer(int bindPort, List<AsyncConnectionClient> clients, Optional<WebClient> optionalWebClient,
+			InterfaceSpecList interfaceSpecList, Optional<JmsTemplate> optionalJmsTemplate,
+			String directTestCallReturn) {
 		this.bindPort = bindPort;
 		this.clients = clients;
 		this.webClient = optionalWebClient.orElse(null);
-		this.interfaceInfoList = interfaceInfoList;
+		this.interfaceSpecList = interfaceSpecList;
 		this.jmsTemplate = optionalJmsTemplate.orElse(null);
+		this.directTestCallReturn = directTestCallReturn;
 	}
-	
+
 	public void start() {
-        bossGroup = new NioEventLoopGroup(1);
-        workerGroup = new NioEventLoopGroup();
+		bossGroup = new NioEventLoopGroup(1);
+		workerGroup = new NioEventLoopGroup();
 
-        Thread serverThread = new Thread(() -> {
-            try {
-                ServerBootstrap b = new ServerBootstrap();
-                b.group(bossGroup, workerGroup)
-                 .channel(NioServerSocketChannel.class)
-                 .childHandler(new ChannelInitializer<SocketChannel>() {
-                     @Override
-                     protected void initChannel(SocketChannel ch) {
+		Thread serverThread = new Thread(() -> {
+			try {
+				ServerBootstrap b = new ServerBootstrap();
+				b.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
+						.childHandler(new ChannelInitializer<SocketChannel>() {
+							@Override
+							protected void initChannel(SocketChannel ch) {
 //                    	 ch.pipeline().addLast(new mb.fw.net.common.codec.LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4, true));
-                         ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO), new ProxyServerHandler(clients, webClient, interfaceInfoList, jmsTemplate));
-                     }
-                 });
+								ch.pipeline().addLast(
+										TcpMessageLoggingConstants.prettyLogging ? new PrettyLoggingHandler(LogLevel.INFO)
+												: new LoggingHandler(LogLevel.INFO),
+										new ProxyServerHandler(clients, webClient, interfaceSpecList, jmsTemplate,
+												directTestCallReturn));
+							}
+						});
 
-                ChannelFuture f = b.bind(bindPort).sync();
-                log.info("police-minwon-tcp-proxy-server started on port " + bindPort);
-                f.channel().closeFuture().sync();
+				ChannelFuture f = b.bind(bindPort).sync();
+				log.info("police-minwon-tcp-proxy-server started on port " + bindPort);
+				f.channel().closeFuture().sync();
 
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } finally {
-                shutdown();
-            }
-        });
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			} finally {
+				shutdown();
+			}
+		});
 
-        serverThread.setName("police-minwon-tcp-proxy-server");
-        serverThread.start();
-    }
-	
-    public void shutdown() {
+		serverThread.setName("police-minwon-tcp-proxy-server");
+		serverThread.start();
+	}
+
+	public void shutdown() {
 		log.info("Shutdown police-minwon-tcp-proxy-server");
-        if (bossGroup != null) bossGroup.shutdownGracefully();
-        if (workerGroup != null) workerGroup.shutdownGracefully();
-    }
+		if (bossGroup != null)
+			bossGroup.shutdownGracefully();
+		if (workerGroup != null)
+			workerGroup.shutdownGracefully();
+	}
 
 }

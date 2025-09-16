@@ -22,6 +22,8 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import mb.fw.policeminwon.constants.TcpMessageLoggingConstants;
+import mb.fw.policeminwon.netty.proxy.PrettyLoggingHandler;
 
 @Slf4j
 public class AsyncConnectionClient {
@@ -54,23 +56,25 @@ public class AsyncConnectionClient {
 			protected void initChannel(SocketChannel ch) {
 				ChannelPipeline p = ch.pipeline();
 //           	 	p.addLast(new mb.fw.net.common.codec.LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4, true));
-				p.addLast(new LoggingHandler(LogLevel.INFO), new SimpleChannelInboundHandler<Object>() {
-					@Override
-					protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
-						super.channelRead(ctx, msg);
-					}
+				p.addLast(TcpMessageLoggingConstants.prettyLogging ? new PrettyLoggingHandler(LogLevel.INFO)
+						: new LoggingHandler(LogLevel.INFO), new SimpleChannelInboundHandler<Object>() {
+							@Override
+							protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+								super.channelRead(ctx, msg);
+							}
 
-					@Override
-					public void channelInactive(ChannelHandlerContext ctx) {
-						log.info("Disconnect [{}] async-connection-client. channel-id : {}", systemCode, channel.id() );
-						scheduleReconnect();
-					}
+							@Override
+							public void channelInactive(ChannelHandlerContext ctx) {
+								log.info("Disconnected [{}] async-connection-client. channel-id : {}", systemCode,
+										channel.id());
+								scheduleReconnect();
+							}
 
-					@Override
-					public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-						super.exceptionCaught(ctx, cause);
-					}
-				});
+							@Override
+							public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+								super.exceptionCaught(ctx, cause);
+							}
+						});
 			}
 		});
 
