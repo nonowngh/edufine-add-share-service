@@ -24,12 +24,13 @@ import mb.fw.policeminwon.constants.SystemCodeConstatns;
 import mb.fw.policeminwon.constants.TcpBodyConstatns;
 import mb.fw.policeminwon.constants.TcpHeaderSrFlag;
 import mb.fw.policeminwon.constants.TcpHeaderTransactionCode;
-import mb.fw.policeminwon.filter.ActionLoggingFilter;
+import mb.fw.policeminwon.filter.TcpHandlerLoggingFilter;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
 import mb.fw.policeminwon.parser.slice.MessageSlice;
 import mb.fw.policeminwon.spec.InterfaceSpec;
 import mb.fw.policeminwon.spec.InterfaceSpecList;
 import mb.fw.policeminwon.web.dto.ESBApiRequest;
+import reactor.core.publisher.Mono;
 
 @Slf4j
 public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
@@ -39,7 +40,7 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 	private final InterfaceSpecList interfaceSpecList;
 	private final JmsTemplate jmsTemplate;
 	private final String directTestCallReturn;
-	
+
 	public ProxyServerHandler(List<AsyncConnectionClient> clients, WebClient webClient,
 			InterfaceSpecList interfaceSpecList, JmsTemplate jmsTemplate, String directTestCallReturn) {
 		this.clients = clients;
@@ -50,8 +51,7 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 	}
 
 	private static final Set<TcpHeaderTransactionCode> panaltyTransactionCode = Collections.unmodifiableSet(
-			new HashSet<TcpHeaderTransactionCode>(Arrays.asList(
-					TcpHeaderTransactionCode.VIEW_BILLING_DETAIL,
+			new HashSet<TcpHeaderTransactionCode>(Arrays.asList(TcpHeaderTransactionCode.VIEW_BILLING_DETAIL,
 					TcpHeaderTransactionCode.PAYMENT_RESULT_NOTIFICATION)));
 
 	@Override
@@ -73,80 +73,81 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			}
 			InterfaceSpec interfaceSpec = interfaceSpecList.findInterfaceInfo(sndCode, rcvCode, transactionCode);
 
-			Map<String, Runnable> actions = new HashMap<>();
+			Map<String, Mono<Void>> actions = new HashMap<>();
 			// 테스트 콜
-			actions.put(TcpHeaderTransactionCode.TEST_CALL.getCode(), () -> testCall(inBuf, interfaceSpec));
+			actions.put(TcpHeaderTransactionCode.TEST_CALL.getCode(), testCall(inBuf, interfaceSpec));
 			// 고지내역 상세조회
-			actions.put(TcpHeaderTransactionCode.VIEW_BILLING_DETAIL.getCode(),
-					() -> penaltyProcess(inBuf, interfaceSpec));
+			actions.put(TcpHeaderTransactionCode.VIEW_BILLING_DETAIL.getCode(), penaltyProcess(inBuf, interfaceSpec));
 			// 납부결과 통지
 			actions.put(TcpHeaderTransactionCode.PAYMENT_RESULT_NOTIFICATION.getCode(),
-					() -> penaltyProcess(inBuf, interfaceSpec));
+					penaltyProcess(inBuf, interfaceSpec));
 			// 납부 (재)취소
-			actions.put(TcpHeaderTransactionCode.CANCEL_PAYMENT.getCode(),
-					() -> cancelProcess(inBuf, srFlag, interfaceSpec));
+			actions.put(TcpHeaderTransactionCode.CANCEL_PAYMENT.getCode(), cancelProcess(inBuf, interfaceSpec));
 
-			Runnable action = actions.getOrDefault(transactionCode, () -> {
-				throw new IllegalArgumentException("Invalid transaction-code -> " + transactionCode);
-			});
-
-			Runnable filteredAction = ActionLoggingFilter.routeLoggingFilter(action, interfaceSpec, jmsTemplate);
-			filteredAction.run();
+			Mono<Void> action = actions.getOrDefault(transactionCode,
+					Mono.error(new IllegalArgumentException("Invalid transaction-code -> " + transactionCode)));
+			Mono<Void> filteredAction = TcpHandlerLoggingFilter.routeLoggingFilter(action, interfaceSpec, jmsTemplate);
+			filteredAction.subscribe();
 		} finally {
 			if (((ReferenceCounted) msg).refCnt() > 0)
 				ReferenceCountUtil.release(msg);
 		}
 	}
 
-	private void cancelProcess(ByteBuf inBuf, String srFlag, InterfaceSpec interfaceSpec) {
-		getTcpClientAndSendMessage(interfaceSpec.getRcvCode(), inBuf);
-		if (SystemCodeConstatns.KFTC.equals(interfaceSpec.getSndCode())) {
-			esbApiCall(MessageSlice.getHeaderMessage(inBuf), MessageSlice.getCancelPaymentTotalBody((inBuf)),
-					ESBAPIContextPathConstants.CANCEL_PAYMENT);
-		}
+	private Mono<Void> cancelProcess(ByteBuf inBuf, InterfaceSpec interfaceSpec) {
+		return Mono.fromRunnable(() -> getTcpClientAndSendMessage(interfaceSpec.getRcvCode(), inBuf))
+				.then(SystemCodeConstatns.KFTC.equals(interfaceSpec.getSndCode()) ? esbApiCall(
+						MessageSlice.getHeaderMessage(inBuf), MessageSlice.getCancelPaymentTotalBody((inBuf)),
+						ESBAPIContextPathConstants.CANCEL_PAYMENT) : Mono.empty());
 	}
 
-	private void penaltyProcess(ByteBuf inBuf, InterfaceSpec interfaceSpec) {
+	private Mono<Void> penaltyProcess(ByteBuf inBuf, InterfaceSpec interfaceSpec) {
 		String rcvCode = interfaceSpec.getRcvCode();
 		if (SystemCodeConstatns.SUMMRAY.equals(rcvCode)) {
 			// 고지내역 상세조회
 			if (TcpHeaderTransactionCode.VIEW_BILLING_DETAIL.getCode().equals(interfaceSpec.getMessageCode()))
-				esbApiCall(MessageSlice.getHeaderMessage(inBuf), MessageSlice.getVeiwBillingDetailTotalBody((inBuf)),
+				return esbApiCall(MessageSlice.getHeaderMessage(inBuf),
+						MessageSlice.getVeiwBillingDetailTotalBody((inBuf)),
 						ESBAPIContextPathConstants.VIEW_VIEW_BILLING_DETAIL);
 			// 납부결과 통지
 			else
-				esbApiCall(MessageSlice.getHeaderMessage(inBuf),
+				return esbApiCall(MessageSlice.getHeaderMessage(inBuf),
 						MessageSlice.getPaymentResultNotificationTotalBody((inBuf)),
 						ESBAPIContextPathConstants.PAYMENT_RESULT_NOTIFICATION);
 		} else {
-			getTcpClientAndSendMessage(rcvCode, inBuf);
+			return getTcpClientAndSendMessage(rcvCode, inBuf);
 		}
 	}
 
-	private void testCall(ByteBuf inBuf, InterfaceSpec interfaceSpec) {
-		if(directTestCallReturn != null) getTcpClientAndSendMessage(SystemCodeConstatns.KFTC, Unpooled.copiedBuffer(directTestCallReturn, ByteEncodingConstants.CHARSET));
-		else getTcpClientAndSendMessage(interfaceSpec.getRcvCode(), inBuf);
+	private Mono<Void> testCall(ByteBuf inBuf, InterfaceSpec interfaceSpec) {
+			if (directTestCallReturn != null) {
+				return  getTcpClientAndSendMessage(SystemCodeConstatns.KFTC,
+						Unpooled.copiedBuffer(directTestCallReturn, ByteEncodingConstants.CHARSET));
+			} else {
+				return getTcpClientAndSendMessage(interfaceSpec.getRcvCode(), inBuf);
+			}
 	}
 
-	private void esbApiCall(String header, String body, String contextPath) {
-		if (webClient != null) {
-			webClient.post().uri(contextPath)
-					.bodyValue(ESBApiRequest.builder().headerMessage(header).bodyMessage(body).build()).retrieve()
-					.bodyToMono(String.class).doOnNext(response -> {
-						log.info("API 응답: " + response);
-					}).doOnError(error -> {
-						log.error("API 오류: " + error.getMessage());
-					}).subscribe();
-		} else {
+	public Mono<Void> esbApiCall(String header, String body, String contextPath) {
+		if (webClient == null) {
 			log.error("WebClient is NULL. check yaml file.");
+			return Mono.error(new IllegalStateException("WebClient is NULL"));
 		}
+
+		return webClient.post().uri(contextPath)
+				.bodyValue(ESBApiRequest.builder().headerMessage(header).bodyMessage(body).build()).retrieve()
+				.bodyToMono(String.class).doOnNext(response -> log.info("API 응답: {}", response)).then();
 	}
 
-	private void getTcpClientAndSendMessage(String targetSystemCode, ByteBuf inBuf) {
-		AsyncConnectionClient asyncClient = clients.stream()
-				.filter(client -> client.getSystemCode().equals(targetSystemCode)).findFirst()
-				.orElseThrow(() -> new IllegalStateException("Tcp 클라이언트를 찾을 수 없습니다. 시스템 코드: " + targetSystemCode));
-		asyncClient.callAsync(inBuf);
+	private Mono<Void> getTcpClientAndSendMessage(String targetSystemCode, ByteBuf inBuf) {
+		return Mono.fromCallable(() -> {
+			AsyncConnectionClient asyncClient = clients.stream()
+					.filter(client -> client.getSystemCode().equals(targetSystemCode)).findFirst()
+					.orElseThrow(() -> new IllegalStateException("Tcp 클라이언트를 찾을 수 없습니다. 시스템 코드: " + targetSystemCode));
+			asyncClient.callAsync(inBuf);
+			return null; // Mono<Void>
+		});
+
 	}
 
 	@Override

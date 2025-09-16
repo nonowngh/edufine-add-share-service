@@ -19,11 +19,11 @@ import mb.fw.atb.util.MDCLogging;
 
 	public static void main(String[] args) throws Exception {
 //		ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
-        System.setProperty("javax.xml.parsers.DocumentBuilderFactory", "com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl");
-        AdaptorStarter.init();
-        String adaptorName = AdaptorConfig.getInstance().getAdaptorName();
-        log.info("adaptorName: {}", adaptorName);
-        MDCLogging.create("NONE", "NONE", adaptorName);
+//        System.setProperty("javax.xml.parsers.DocumentBuilderFactory", "com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl");
+//        AdaptorStarter.init();
+//        String adaptorName = AdaptorConfig.getInstance().getAdaptorName();
+//        log.info("adaptorName: {}", adaptorName);
+//        MDCLogging.create("NONE", "NONE", adaptorName);
         SpringApplication.run(PoliceMinwonApplication.class, args);
 	}
 }

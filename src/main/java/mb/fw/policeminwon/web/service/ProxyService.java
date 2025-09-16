@@ -29,13 +29,13 @@ public class ProxyService {
 //		() -> new IllegalStateException("Tcp 클라이언트를 찾을 수 없습니다. 시스템 코드: " + targetSystemCode));
 	}
 
-	public void sendResponseViewBillingDetail(String tcpHeaderMessage, String tcpBodyMessage, String esbTransactionId) {
+	public void sendResponseViewBillingDetail(String tcpHeaderMessage, String tcpBodyMessage, String esbTransactionId) throws Exception {
 		client.callAsync(ByteBufUtils.addMessageLength(Unpooled.wrappedBuffer(
 				CommonHeaderParser.responseHeader(tcpHeaderMessage, "0210", "000", esbTransactionId),
 				Unpooled.copiedBuffer(tcpBodyMessage, ByteEncodingConstants.CHARSET))));
 	}
 	
-	public void sendResponsePaymentResultNotificaiton(String tcpHeaderMessage, String tcpBodyMessage, String esbTransactionId) {
+	public void sendResponsePaymentResultNotificaiton(String tcpHeaderMessage, String tcpBodyMessage, String esbTransactionId) throws Exception {
 		client.callAsync(ByteBufUtils.addMessageLength(Unpooled.wrappedBuffer(
 				CommonHeaderParser.responseHeader(tcpHeaderMessage, "0210", "000", esbTransactionId),
 				Unpooled.copiedBuffer(tcpBodyMessage, ByteEncodingConstants.CHARSET))));

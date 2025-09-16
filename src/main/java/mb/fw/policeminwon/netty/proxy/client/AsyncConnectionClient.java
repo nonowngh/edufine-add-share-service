@@ -97,9 +97,9 @@ public class AsyncConnectionClient {
 				connectionLimiter.release();
 				if (future.isSuccess()) {
 					channel = future.channel();
-					log.info("Connected to [{}:{}] server", host, port);
+					log.info("Connected to [{}:{}] ({})server ", host, port, systemCode);
 				} else {
-					log.error("Failed to connect. Retrying in " + reconnectDelaySec + " seconds...");
+					log.error("Failed to connect [{}:{}]. Retrying in {} seconds...", host, port, reconnectDelaySec);
 					scheduleReconnect();
 				}
 			});
@@ -123,23 +123,28 @@ public class AsyncConnectionClient {
 		return bootstrap.connect(host, port).addListener((ChannelFutureListener) future -> {
 			if (future.isSuccess()) {
 				channel = future.channel();
-				log.info("Connected to [{}:{}] server", host, port);
+				log.info("Connected to [{}:{}] ({})server ", host, port, systemCode);
 			} else {
-				log.error("Reconnection failed");
+				log.error("Reconnection failed [{}:{}].", host, port);
 			}
 		});
 	}
 
-	public void callAsync(ByteBuf outBuf) {
+	public void callAsync(ByteBuf outBuf) throws Exception {
 		try {
 			if (channel != null && channel.isActive()) {
 				channel.writeAndFlush(outBuf).awaitUninterruptibly();
 			} else {
 				ChannelFuture future = reconnectOnInactive();
 				future.awaitUninterruptibly();
+				if (!future.isSuccess()) {
+					throw new Exception("Connection failed to [" + host + ":" + port + "]");
+				}
 				channel = future.channel();
 				if (channel != null && channel.isActive()) {
 					channel.writeAndFlush(outBuf).awaitUninterruptibly();
+				} else {
+					throw new Exception("Channel is not active after reconnect");
 				}
 			}
 		} finally {
