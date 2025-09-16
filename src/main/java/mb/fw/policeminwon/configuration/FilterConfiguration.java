@@ -10,10 +10,10 @@ import mb.fw.policeminwon.filter.ServletLoggingFilter;
 public class FilterConfiguration {
 
 	@Bean
-    FilterRegistrationBean<ServletLoggingFilter> loggingFilter() {
+    FilterRegistrationBean<ServletLoggingFilter> servletLoggingFilter() {
         FilterRegistrationBean<ServletLoggingFilter> registrationBean = new FilterRegistrationBean<>();
         registrationBean.setFilter(new ServletLoggingFilter());
-        registrationBean.addUrlPatterns("/esb/api/proxy/*");  // 특정 URL 패턴에만 필터 적용
+        registrationBean.addUrlPatterns("/esb/api/proxy/*");
         return registrationBean;
     }
 }

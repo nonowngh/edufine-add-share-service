@@ -1,9 +1,14 @@
 package mb.fw.policeminwon.netty.proxy;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import io.netty.buffer.ByteBuf;
@@ -20,6 +25,7 @@ import mb.fw.policeminwon.constants.TcpHeaderTransactionCode;
 import mb.fw.policeminwon.filter.ActionLoggingFilter;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
 import mb.fw.policeminwon.parser.slice.MessageSlice;
+import mb.fw.policeminwon.spec.InterfaceInfo;
 import mb.fw.policeminwon.spec.InterfaceInfoList;
 import mb.fw.policeminwon.web.dto.ESBApiRequest;
 
@@ -29,13 +35,20 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 	private final List<AsyncConnectionClient> clients;
 	private final WebClient webClient;
 	private final InterfaceInfoList interfaceInfoList;
+	private final JmsTemplate jmsTemplate;
 
 	public ProxyServerHandler(List<AsyncConnectionClient> clients, WebClient webClient,
-			InterfaceInfoList interfaceInfoList) {
+			InterfaceInfoList interfaceInfoList, JmsTemplate jmsTemplate) {
 		this.clients = clients;
 		this.webClient = webClient;
 		this.interfaceInfoList = interfaceInfoList;
+		this.jmsTemplate = jmsTemplate;
 	}
+
+	private static final Set<TcpHeaderTransactionCode> panaltyTransactionCode = Collections.unmodifiableSet(
+			new HashSet<TcpHeaderTransactionCode>(Arrays.asList(
+					TcpHeaderTransactionCode.VIEW_BILLING_DETAIL,
+					TcpHeaderTransactionCode.PAYMENT_RESULT_NOTIFICATION)));
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -44,28 +57,36 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			String transactionCode = MessageSlice.getTransactionCode(inBuf);
 			log.info("transactionCode -> [{}]", transactionCode);
 			String srFlag = MessageSlice.getSrFlag(inBuf);
-			String targetSystemCode = TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstatns.TRAFFIC
+			String sndCode = TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstatns.KFTC
+					: SystemCodeConstatns.TRAFFIC;
+			String rcvCode = TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstatns.TRAFFIC
 					: SystemCodeConstatns.KFTC;
-
-//			InterfaceInfo interfaceInfo = interfaceInfoList.findInterfaceInfo(transactionCode, srFlag, transactionCode);
+			if (panaltyTransactionCode.contains(TcpHeaderTransactionCode.fromCode(transactionCode))) {
+				String policeSystemCode = MessageSlice.getElecPayNo(inBuf);
+				if (policeSystemCode.startsWith(TcpBodyConstatns.getSJSElecNumType())) {
+					rcvCode = SystemCodeConstatns.SUMMRAY;
+				}
+			}
+			InterfaceInfo interfaceInfo = interfaceInfoList.findInterfaceInfo(sndCode, rcvCode, transactionCode);
 
 			Map<String, Runnable> actions = new HashMap<>();
 			// 테스트 콜
-			actions.put(TcpHeaderTransactionCode.TEST_CALL, () -> testCall(inBuf, targetSystemCode));
+			actions.put(TcpHeaderTransactionCode.TEST_CALL.getCode(), () -> testCall(inBuf, interfaceInfo));
 			// 고지내역 상세조회
-			actions.put(TcpHeaderTransactionCode.VIEW_BILLING_DETAIL,
-					() -> penaltyProcess(inBuf, true, targetSystemCode));
+			actions.put(TcpHeaderTransactionCode.VIEW_BILLING_DETAIL.getCode(),
+					() -> penaltyProcess(inBuf, interfaceInfo));
 			// 납부결과 통지
-			actions.put(TcpHeaderTransactionCode.PAYMENT_RESULT_NOTIFICATION,
-					() -> penaltyProcess(inBuf, false, targetSystemCode));
+			actions.put(TcpHeaderTransactionCode.PAYMENT_RESULT_NOTIFICATION.getCode(),
+					() -> penaltyProcess(inBuf, interfaceInfo));
 			// 납부 (재)취소
-			actions.put(TcpHeaderTransactionCode.CANCEL_PAYMENT, () -> cancelProcess(inBuf, srFlag, targetSystemCode));
+			actions.put(TcpHeaderTransactionCode.CANCEL_PAYMENT.getCode(),
+					() -> cancelProcess(inBuf, srFlag, interfaceInfo));
 
 			Runnable action = actions.getOrDefault(transactionCode, () -> {
 				throw new IllegalArgumentException("Invalid transaction-code -> " + transactionCode);
 			});
 
-			Runnable filteredAction = ActionLoggingFilter.routeLoggingFilter(action, transactionCode, inBuf);
+			Runnable filteredAction = ActionLoggingFilter.routeLoggingFilter(action, interfaceInfo, jmsTemplate);
 			filteredAction.run();
 		} finally {
 			if (((ReferenceCounted) msg).refCnt() > 0)
@@ -73,32 +94,33 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 		}
 	}
 
-	private void cancelProcess(ByteBuf inBuf, String srFlag, String targetSystemCode) {
-		getTcpClientAndSendMessage(targetSystemCode, inBuf);
-		if (!TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag)) {
+	private void cancelProcess(ByteBuf inBuf, String srFlag, InterfaceInfo interfaceInfo) {
+		getTcpClientAndSendMessage(interfaceInfo.getRcvCode(), inBuf);
+		if (SystemCodeConstatns.KFTC.equals(interfaceInfo.getSndCode())) {
 			esbApiCall(MessageSlice.getHeaderMessage(inBuf), MessageSlice.getCancelPaymentTotalBody((inBuf)),
 					ESBAPIContextPathConstants.CANCEL_PAYMENT);
 		}
 	}
 
-	private void penaltyProcess(ByteBuf inBuf, boolean isBillingDetail, String targetSystemCode) {
-		String policeSystemCode = MessageSlice.getElecPayNo(inBuf);
-
-		if (policeSystemCode.startsWith(TcpBodyConstatns.getSJSElecNumType())) {
-			if (isBillingDetail)
+	private void penaltyProcess(ByteBuf inBuf, InterfaceInfo interfaceInfo) {
+		String rcvCode = interfaceInfo.getRcvCode();
+		if (SystemCodeConstatns.SUMMRAY.equals(rcvCode)) {
+			// 고지내역 상세조회
+			if (TcpHeaderTransactionCode.VIEW_BILLING_DETAIL.getCode().equals(interfaceInfo.getMessageCode()))
 				esbApiCall(MessageSlice.getHeaderMessage(inBuf), MessageSlice.getVeiwBillingDetailTotalBody((inBuf)),
 						ESBAPIContextPathConstants.VIEW_VIEW_BILLING_DETAIL);
+			// 납부결과 통지
 			else
 				esbApiCall(MessageSlice.getHeaderMessage(inBuf),
 						MessageSlice.getPaymentResultNotificationTotalBody((inBuf)),
 						ESBAPIContextPathConstants.PAYMENT_RESULT_NOTIFICATION);
 		} else {
-			getTcpClientAndSendMessage(targetSystemCode, inBuf);
+			getTcpClientAndSendMessage(rcvCode, inBuf);
 		}
 	}
 
-	private void testCall(ByteBuf inBuf, String targetSystemCode) {
-		getTcpClientAndSendMessage(targetSystemCode, inBuf);
+	private void testCall(ByteBuf inBuf, InterfaceInfo interfaceInfo) {
+		getTcpClientAndSendMessage(interfaceInfo.getRcvCode(), inBuf);
 	}
 
 	private void esbApiCall(String header, String body, String contextPath) {

@@ -1,69 +1,72 @@
 package mb.fw.policeminwon.filter;
 
-import io.netty.buffer.ByteBuf;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+import org.springframework.jms.core.JmsTemplate;
+
 import lombok.extern.slf4j.Slf4j;
+import mb.fw.atb.util.ATBUtil;
+import mb.fw.atb.util.TransactionIdGenerator;
 import mb.fw.policeminwon.constants.SystemCodeConstatns;
-import mb.fw.policeminwon.constants.TcpBodyConstatns;
-import mb.fw.policeminwon.constants.TcpHeaderSrFlag;
-import mb.fw.policeminwon.constants.TcpHeaderTransactionCode;
-import mb.fw.policeminwon.parser.slice.MessageSlice;
+import mb.fw.policeminwon.spec.InterfaceInfo;
 
 @Slf4j
 public class ActionLoggingFilter {
 
-	public static Runnable routeLoggingFilter(Runnable action, String transactionCode, ByteBuf inBuf) {
+	public static Runnable routeLoggingFilter(Runnable action, InterfaceInfo interfaceInfo, JmsTemplate jmsTemplate) {
 		return () -> {
-			String srFlag = MessageSlice.getSrFlag(inBuf);
-			String targetSystemCode = TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstatns.TRAFFIC
-					: SystemCodeConstatns.KFTC;
-			String from = targetSystemCode.equals(SystemCodeConstatns.KFTC) ? "교통(TCS)" : "금결원(KFT)";
-			String to = targetSystemCode.equals(SystemCodeConstatns.KFTC) ? "금결원(KFT)" : "교통(TCS)";
-			String reqOrRes = targetSystemCode.equals(SystemCodeConstatns.KFTC) ? "응답" : "요청";
-			String policeSystemCode = MessageSlice.getElecPayNo(inBuf);
-			boolean isTargetSummary = policeSystemCode.startsWith(TcpBodyConstatns.getSJSElecNumType());
-			if (isTargetSummary) {
-				from = targetSystemCode.equals(SystemCodeConstatns.KFTC) ? "즉심(SJS)" : "금결원(KFT)";
-				to = targetSystemCode.equals(SystemCodeConstatns.KFTC) ? "금결원(KFT)" : "즉심(SJS)";
-				targetSystemCode = TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstatns.SUMMRAY
-						: SystemCodeConstatns.KFTC;
-			}
-			switch (transactionCode) {
-			case TcpHeaderTransactionCode.TEST_CALL:
-				log.info("테스트 콜 {}...[{}] -> [{}]", reqOrRes, from, to);
-				break;
-			case TcpHeaderTransactionCode.VIEW_BILLING_DETAIL:
-				logTransaction(targetSystemCode, reqOrRes, from, to, isTargetSummary, "고지내역 상세조회");
-				break;
-			case TcpHeaderTransactionCode.PAYMENT_RESULT_NOTIFICATION:
-				if (TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag))
-					to = "교통(TCS), 즉심(SJS)";
-				logTransaction(targetSystemCode, reqOrRes, from, to, isTargetSummary, "납부결과 통지");
-				break;
-			case TcpHeaderTransactionCode.CANCEL_PAYMENT:
-				logTransaction(targetSystemCode, reqOrRes, from, to, isTargetSummary, "납부 (재)취소");
-				break;
-			default:
-				log.error("알 수 없는 거래 구분 코드 : {}", transactionCode);
-				break;
+			String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+				
+			// ESB 트랜젝션 아이디 생성
+			String esbTxId = TransactionIdGenerator.generate(interfaceInfo.getInterfaceId(), "", nowDateTime);
+			// 첫번째 로깅
+			if (jmsTemplate != null && interfaceInfo.isLogging()) {
+				try {
+					ATBUtil.startLogging(jmsTemplate, interfaceInfo.getInterfaceId(), esbTxId, null, 1,
+							interfaceInfo.getSndCode(), interfaceInfo.getRcvCode(), nowDateTime, null);
+				} catch (Exception e) {
+					log.error("JMS start logging error!!!", e);
+				}
 			}
 
+			String from = interfaceInfo.getSndCode();
+			String to = interfaceInfo.getRcvCode();
+			String description = interfaceInfo.getDescription();
+
+			logTransaction(description, from, to, esbTxId);
+
+			String statusCd = "S";
+			String errorMsg = "SUCCESS";
+			int errorCnt = 0;
 			try {
 				action.run();
 			} catch (Exception e) {
-				// 예외 처리
-				log.error("Error occurred during action execution: " + e.getMessage());
+				statusCd = "F";
+				errorMsg = e.getMessage();
+				errorCnt = 1;
+				log.error("Error occurred during action execution: " + errorMsg);
+			} finally {
+				// 두번째 로깅
+				if (jmsTemplate != null && interfaceInfo.isLogging()) {
+					try {
+						ATBUtil.endLogging(jmsTemplate, interfaceInfo.getInterfaceId(), esbTxId, null, errorCnt,
+								statusCd, errorMsg, null);
+					} catch (Exception e) {
+						log.error("JMS end logging error!!!", e);
+					}
+				}
 			}
 		};
 	}
 
-	private static void logTransaction(String targetSystemCode, String reqOrRes, String from, String to,
-			boolean isSummray, String transactionType) {
-		if (SystemCodeConstatns.SUMMRAY.equals(targetSystemCode)) {
-			log.info("{} {} - api call...[{}] -> [{}]", transactionType, reqOrRes, from, to);
-		} else if (isSummray) {
-			log.info("{} {} - tcp send...[{}] -> [{}]", transactionType, reqOrRes, from, to);
+	private static void logTransaction(String description, String from, String to, String esbTxId) {
+		if (SystemCodeConstatns.SUMMRAY.equals(to)) {
+			log.info("{} - api call...[{}] -> [{}] | tran-id({})", description, from, to, esbTxId);
+		} else if (SystemCodeConstatns.SUMMRAY.equals(from)) {
+			log.info("{} - tcp send...[{}] -> [{}] | tran-id({})", description, from, to, esbTxId);
 		} else {
-			log.info("{} {} - bypass...[{}] -> [{}]", transactionType, reqOrRes, from, to);
+			log.info("{} - bypass...[{}] -> [{}] | tran-id({})", description, from, to, esbTxId);
 		}
 	}
 }

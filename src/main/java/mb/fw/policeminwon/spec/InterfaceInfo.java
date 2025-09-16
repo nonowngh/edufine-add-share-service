@@ -15,5 +15,7 @@ public class InterfaceInfo {
 	private String rcvCode;
 	// 인터페이스 설명
 	private String description;
+	// ESB LOGGING 여부
+	private boolean logging = true;
 
 }

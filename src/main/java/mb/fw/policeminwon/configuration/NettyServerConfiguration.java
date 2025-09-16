@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import lombok.Data;
@@ -35,8 +36,8 @@ public class NettyServerConfiguration {
 
 	@Bean(initMethod = "start", destroyMethod = "shutdown")
 	@ConditionalOnProperty(prefix = "tcp.server.proxy", name = "enabled", havingValue = "true")
-	ProxyServer proxyServer(List<AsyncConnectionClient> clients, @Qualifier("webClient") Optional<WebClient> optionalWebClient, InterfaceInfoList interfaceInfoList) {
-		return new ProxyServer(proxy.getBindPort(), clients, optionalWebClient, interfaceInfoList);
+	ProxyServer proxyServer(List<AsyncConnectionClient> clients, @Qualifier("webClient") Optional<WebClient> optionalWebClient, InterfaceInfoList interfaceInfoList, Optional<JmsTemplate> optionalJmsTemplate) {
+		return new ProxyServer(proxy.getBindPort(), clients, optionalWebClient, interfaceInfoList, optionalJmsTemplate);
 	}
 
 //	@Bean(initMethod = "start", destroyMethod = "shutdown")

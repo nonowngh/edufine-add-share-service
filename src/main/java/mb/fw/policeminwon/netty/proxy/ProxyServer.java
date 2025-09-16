@@ -3,6 +3,7 @@ package mb.fw.policeminwon.netty.proxy;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.jms.core.JmsTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import io.netty.bootstrap.ServerBootstrap;
@@ -25,16 +26,18 @@ public class ProxyServer {
     private EventLoopGroup workerGroup;
     
     private WebClient webClient;
+    private JmsTemplate jmsTemplate;
     
 	private int bindPort;
     private final List<AsyncConnectionClient> clients;
     private InterfaceInfoList interfaceInfoList;
 	
-	public ProxyServer(int bindPort, List<AsyncConnectionClient> clients, Optional<WebClient> optionalWebClient, InterfaceInfoList interfaceInfoList) {
+	public ProxyServer(int bindPort, List<AsyncConnectionClient> clients, Optional<WebClient> optionalWebClient, InterfaceInfoList interfaceInfoList, Optional<JmsTemplate> optionalJmsTemplate) {
 		this.bindPort = bindPort;
 		this.clients = clients;
 		this.webClient = optionalWebClient.orElse(null);
 		this.interfaceInfoList = interfaceInfoList;
+		this.jmsTemplate = optionalJmsTemplate.orElse(null);
 	}
 	
 	public void start() {
@@ -50,7 +53,7 @@ public class ProxyServer {
                      @Override
                      protected void initChannel(SocketChannel ch) {
 //                    	 ch.pipeline().addLast(new mb.fw.net.common.codec.LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4, true));
-                         ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO), new ProxyServerHandler(clients, webClient, interfaceInfoList));
+                         ch.pipeline().addLast(new LoggingHandler(LogLevel.INFO), new ProxyServerHandler(clients, webClient, interfaceInfoList, jmsTemplate));
                      }
                  });
 
