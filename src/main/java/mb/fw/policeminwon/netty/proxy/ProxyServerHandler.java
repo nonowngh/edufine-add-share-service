@@ -1,5 +1,7 @@
 package mb.fw.policeminwon.netty.proxy;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -18,6 +20,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import lombok.extern.slf4j.Slf4j;
+import mb.fw.atb.util.TransactionIdGenerator;
 import mb.fw.policeminwon.constants.ByteEncodingConstants;
 import mb.fw.policeminwon.constants.ESBAPIContextPathConstants;
 import mb.fw.policeminwon.constants.SystemCodeConstatns;
@@ -29,6 +32,7 @@ import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
 import mb.fw.policeminwon.parser.slice.MessageSlice;
 import mb.fw.policeminwon.spec.InterfaceSpec;
 import mb.fw.policeminwon.spec.InterfaceSpecList;
+import mb.fw.policeminwon.utils.TransactionSequenceGenerator;
 import mb.fw.policeminwon.web.dto.ESBApiMessage;
 import reactor.core.publisher.Mono;
 
@@ -72,21 +76,23 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 				}
 			}
 			InterfaceSpec interfaceSpec = interfaceSpecList.findInterfaceInfo(sndCode, rcvCode, transactionCode);
-
+			String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+			String esbTxId = TransactionIdGenerator.generate(interfaceSpec.getInterfaceId(), TransactionSequenceGenerator.getNextSequence(), nowDateTime);
+			
 			Map<String, Mono<Void>> actions = new HashMap<>();
 			// 테스트 콜
 			actions.put(TcpHeaderTransactionCode.TEST_CALL.getCode(), testCall(inBuf, interfaceSpec));
 			// 고지내역 상세조회
-			actions.put(TcpHeaderTransactionCode.VIEW_BILLING_DETAIL.getCode(), penaltyProcess(inBuf, interfaceSpec));
+			actions.put(TcpHeaderTransactionCode.VIEW_BILLING_DETAIL.getCode(), penaltyProcess(inBuf, interfaceSpec, esbTxId));
 			// 납부결과 통지
 			actions.put(TcpHeaderTransactionCode.PAYMENT_RESULT_NOTIFICATION.getCode(),
-					penaltyProcess(inBuf, interfaceSpec));
+					penaltyProcess(inBuf, interfaceSpec, esbTxId));
 			// 납부 (재)취소
-			actions.put(TcpHeaderTransactionCode.CANCEL_PAYMENT.getCode(), cancelProcess(inBuf, interfaceSpec));
+			actions.put(TcpHeaderTransactionCode.CANCEL_PAYMENT.getCode(), cancelProcess(inBuf, interfaceSpec, esbTxId));
 
 			Mono<Void> action = actions.getOrDefault(transactionCode,
 					Mono.error(new IllegalArgumentException("Invalid transaction-code -> " + transactionCode)));
-			Mono<Void> filteredAction = TcpHandlerLoggingFilter.routeLoggingFilter(action, interfaceSpec, jmsTemplate);
+			Mono<Void> filteredAction = TcpHandlerLoggingFilter.routeLoggingFilter(action, interfaceSpec, jmsTemplate, esbTxId, nowDateTime);
 			filteredAction.subscribe();
 		} finally {
 			if (((ReferenceCounted) msg).refCnt() > 0)
@@ -94,26 +100,26 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 		}
 	}
 
-	private Mono<Void> cancelProcess(ByteBuf inBuf, InterfaceSpec interfaceSpec) {
+	private Mono<Void> cancelProcess(ByteBuf inBuf, InterfaceSpec interfaceSpec, String esbTxId) {
 		return Mono.fromRunnable(() -> getTcpClientAndSendMessage(interfaceSpec.getRcvCode(), inBuf))
 				.then(SystemCodeConstatns.KFTC.equals(interfaceSpec.getSndCode()) ? esbApiCall(
 						MessageSlice.getHeaderMessage(inBuf), MessageSlice.getCancelPaymentTotalBody((inBuf)),
-						ESBAPIContextPathConstants.CANCEL_PAYMENT) : Mono.empty());
+						ESBAPIContextPathConstants.CANCEL_PAYMENT, interfaceSpec.getInterfaceId(), esbTxId) : Mono.empty());
 	}
 
-	private Mono<Void> penaltyProcess(ByteBuf inBuf, InterfaceSpec interfaceSpec) {
+	private Mono<Void> penaltyProcess(ByteBuf inBuf, InterfaceSpec interfaceSpec, String esbTxId) {
 		String rcvCode = interfaceSpec.getRcvCode();
 		if (SystemCodeConstatns.SUMMRAY.equals(rcvCode)) {
 			// 고지내역 상세조회
 			if (TcpHeaderTransactionCode.VIEW_BILLING_DETAIL.getCode().equals(interfaceSpec.getMessageCode()))
 				return esbApiCall(MessageSlice.getHeaderMessage(inBuf),
 						MessageSlice.getVeiwBillingDetailTotalBody((inBuf)),
-						ESBAPIContextPathConstants.VIEW_VIEW_BILLING_DETAIL);
+						ESBAPIContextPathConstants.VIEW_VIEW_BILLING_DETAIL, interfaceSpec.getInterfaceId(), esbTxId);
 			// 납부결과 통지
 			else
 				return esbApiCall(MessageSlice.getHeaderMessage(inBuf),
 						MessageSlice.getPaymentResultNotificationTotalBody((inBuf)),
-						ESBAPIContextPathConstants.PAYMENT_RESULT_NOTIFICATION);
+						ESBAPIContextPathConstants.PAYMENT_RESULT_NOTIFICATION, interfaceSpec.getInterfaceId(), esbTxId);
 		} else {
 			return getTcpClientAndSendMessage(rcvCode, inBuf);
 		}
@@ -128,14 +134,14 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			}
 	}
 
-	public Mono<Void> esbApiCall(String header, String body, String contextPath) {
+	public Mono<Void> esbApiCall(String header, String body, String contextPath, String interfaceId, String esbTxId) {
 		if (webClient == null) {
 			log.error("WebClient is NULL. check yaml file.");
 			return Mono.error(new IllegalStateException("WebClient is NULL"));
 		}
 
 		return webClient.post().uri(contextPath)
-				.bodyValue(ESBApiMessage.builder().headerMessage(header).bodyMessage(body).build()).retrieve()
+				.bodyValue(ESBApiMessage.builder().interfaceId(interfaceId).transactionId(esbTxId).headerMessage(header).bodyMessage(body).build()).retrieve()
 				.bodyToMono(String.class).doOnNext(response -> log.info("API 응답: {}", response)).then();
 	}
 

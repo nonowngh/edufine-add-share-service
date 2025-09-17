@@ -24,7 +24,7 @@ public class SummaryExceptionHandler {
 		log.error("CustomException -> " + ex.getMessage());
 		ESBApiMessage apiMessage = ex.getApiMessage();
 		apiMessage.setStatusCode(ex.getStatusCode().getCode());
-		apiMessage.setEsbErrorMessage(ex.getStatusCode().getDescription());
+		apiMessage.setEsbErrorMessage("["+ex.getStatusCode().getDescription() + "]" + ex.getMessage());
 		CompletableFuture.runAsync(() -> {
 			callBackWebClient.post().uri(ESBAPIContextPathConstants.ERROR).contentType(MediaType.APPLICATION_JSON).bodyValue(apiMessage)
 					.retrieve().toBodilessEntity().doOnSuccess(r -> log.info("Callback success"))

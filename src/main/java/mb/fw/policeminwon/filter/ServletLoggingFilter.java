@@ -10,8 +10,8 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.annotation.WebFilter;
+import javax.servlet.http.HttpServletRequest;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.core.JmsTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,6 +19,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import mb.fw.atb.util.ATBUtil;
 import mb.fw.policeminwon.constants.SystemCodeConstatns;
+import mb.fw.policeminwon.constants.TcpStatusCode;
+import mb.fw.policeminwon.filter.wrapper.CachedBodyHttpServletRequest;
 import mb.fw.policeminwon.spec.InterfaceSpec;
 import mb.fw.policeminwon.spec.InterfaceSpecList;
 import mb.fw.policeminwon.web.dto.ESBApiMessage;
@@ -27,25 +29,32 @@ import mb.fw.policeminwon.web.dto.ESBApiMessage;
 @WebFilter("/esb/api/proxy/*")
 public class ServletLoggingFilter implements Filter {
 
-	@Autowired(required = false)
 	private InterfaceSpecList interfaceSpecList;
-	@Autowired(required = false)
-	JmsTemplate jmsTemplate;
+	private JmsTemplate jmsTemplate;
+
+	public ServletLoggingFilter(InterfaceSpecList interfaceSpecList, JmsTemplate jmsTemplate) {
+		this.interfaceSpecList = interfaceSpecList;
+		this.jmsTemplate = jmsTemplate;
+	}
 
 	@Override
 	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
 			throws IOException, ServletException {
-		
-		log.info("Servlet filter in...");
+
+		log.info("Proxy servlet filter in...");
+
+		HttpServletRequest httpRequest = (HttpServletRequest) request;
+		CachedBodyHttpServletRequest cachedRequest = new CachedBodyHttpServletRequest(httpRequest);
 
 		// ESBApiRequest로 deserialize
-		ESBApiMessage apiRequest = new ObjectMapper().readValue(request.getReader(), ESBApiMessage.class);
+		ESBApiMessage apiRequest = new ObjectMapper().readValue(cachedRequest.getReader(), ESBApiMessage.class);
 		String interfaceId = apiRequest.getInterfaceId();
 		String esbTxId = apiRequest.getTransactionId();
 		if (interfaceId == null) {
-	        throw new IllegalArgumentException("interfaceId는 null일 수 없습니다.");
-	    }
-		
+			throw new IllegalArgumentException("interfaceId는 null일 수 없습니다.");
+		}
+
+		log.info("===[{}] 처리 시작===", esbTxId);
 		// InterfaceInfo
 		InterfaceSpec interfaceSpec = interfaceSpecList.findInterfaceInfo(interfaceId);
 		String from = interfaceSpec.getSndCode();
@@ -63,12 +72,12 @@ public class ServletLoggingFilter implements Filter {
 				log.error("JMS start logging error!!!", e);
 			}
 		}
-		String statusCd = "S";
-		String errorMsg = "SUCCESS";
-		int errorCnt = 0;
+		String statusCd = TcpStatusCode.SUCCESS.getCode().equals(apiRequest.getStatusCode()) ? "S" : "F";
+		String errorMsg = apiRequest.getEsbErrorMessage();
+		int errorCnt = statusCd == "S" ? 0 : 1;
 		// 필터 후 처리를 위해 chain.doFilter 호출
 		try {
-			chain.doFilter(request, response);
+			chain.doFilter(cachedRequest, response);
 		} catch (Exception e) {
 			log.error("RestController 처리 중 오류!", e);
 			statusCd = "F";
@@ -83,6 +92,7 @@ public class ServletLoggingFilter implements Filter {
 			} catch (Exception e) {
 				log.error("JMS end logging error!!!", e);
 			}
+			log.info("===[{}] 처리 종료===", esbTxId);
 		}
 	}
 

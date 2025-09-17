@@ -53,7 +53,6 @@ public class ProxyController {
 
 	@PostMapping("/proxy" + ESBAPIContextPathConstants.ERROR)
 	public Mono<ResponseEntity<String>> error(@RequestBody ESBApiMessage message) {
-		log.info("IN~~~~ proxy");
 		return Mono.just(ResponseEntity.accepted().body("Accept proxy(Error) service call")).doOnSuccess(response -> {
 			try {
 				proxyService.sendResponseError(message.getHeaderMessage(), message.getStatusCode(),

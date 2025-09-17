@@ -1,7 +1,7 @@
 package mb.fw.policeminwon.web.service;
 
-import java.beans.Customizer;
-import java.util.NoSuchElementException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -12,11 +12,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import mb.fw.policeminwon.constants.ESBAPIContextPathConstants;
+import mb.fw.policeminwon.constants.SystemCodeConstatns;
+import mb.fw.policeminwon.constants.TcpHeaderTransactionCode;
 import mb.fw.policeminwon.constants.TcpStatusCode;
 import mb.fw.policeminwon.entity.PaymentResultNotificationEntity;
 import mb.fw.policeminwon.entity.ViewBillingDetailEntity;
 import mb.fw.policeminwon.parser.PaymentResultNotificationParser;
 import mb.fw.policeminwon.parser.ViewBillingDetailParser;
+import mb.fw.policeminwon.spec.InterfaceSpec;
+import mb.fw.policeminwon.spec.InterfaceSpecList;
 import mb.fw.policeminwon.web.dto.ESBApiMessage;
 import mb.fw.policeminwon.web.exception.CustomException;
 import mb.fw.policeminwon.web.mapper.PaymentResultNotificationMapper;
@@ -31,37 +35,80 @@ public class SummaryService {
 
 	private final ViewBillingDetailMapper viewBillingDetailMapper;
 	private final PaymentResultNotificationMapper paymentResultNotificationMapper;
+	private final InterfaceSpecList interfaceSpecList;
 
 	public SummaryService(ViewBillingDetailMapper viewBillingDetailMapper,
 			@Qualifier("callBackWebClient") WebClient callBackWebClient,
-			PaymentResultNotificationMapper paymentResultNotificationMapper) {
+			PaymentResultNotificationMapper paymentResultNotificationMapper, InterfaceSpecList interfaceSpecList) {
 		this.viewBillingDetailMapper = viewBillingDetailMapper;
 		this.callBackWebClient = callBackWebClient;
 		this.paymentResultNotificationMapper = paymentResultNotificationMapper;
+		this.interfaceSpecList = interfaceSpecList;
 	}
 
-	public void doAsyncViewBillingDetail(ESBApiMessage request) {
-		String elecPayNo = ViewBillingDetailParser.toEntity(request.getBodyMessage()).getElecPayNo();
-		ViewBillingDetailEntity entity = Optional
-				.ofNullable(viewBillingDetailMapper.selectBillingDetailByElecPayNo(elecPayNo)).orElseThrow(() -> {
-					return new CustomException("elecPayNo '" + elecPayNo + "' 해당하는 정보가 없음", request, TcpStatusCode.NO_BILLING_RECORDS);
-				});
-		runAsync(request, ViewBillingDetailParser.toMessage(entity), ESBAPIContextPathConstants.VIEW_VIEW_BILLING_DETAIL);
+	private final String sndCode = SystemCodeConstatns.SUMMRAY;
+	private final String rcvCode = SystemCodeConstatns.KFTC;
+
+	public void doAsyncViewBillingDetail(ESBApiMessage apiMessage) {
+		setResponseApiMessage(apiMessage, TcpHeaderTransactionCode.VIEW_BILLING_DETAIL);
+		try {
+			String elecPayNo = ViewBillingDetailParser.toEntity(apiMessage.getBodyMessage()).getElecPayNo();
+			ViewBillingDetailEntity entity = Optional
+					.ofNullable(viewBillingDetailMapper.selectBillingDetailByElecPayNo(elecPayNo))
+					.orElseThrow(() -> new CustomException("elecPayNo '" + elecPayNo + "' 해당하는 정보가 없음", apiMessage,
+							TcpStatusCode.NO_BILLING_RECORDS));
+			runAsync(apiMessage, ViewBillingDetailParser.toMessage(entity),
+					ESBAPIContextPathConstants.VIEW_VIEW_BILLING_DETAIL);
+		} catch (CustomException ce) {
+			throw ce;
+		} catch (Exception e) {
+			throw new CustomException(e.getMessage(), apiMessage, TcpStatusCode.SYSTEM_ERROR);
+		}
 	}
 
-	public void doAsyncPaymentResultNotification(ESBApiMessage request) {
-		PaymentResultNotificationEntity entity = PaymentResultNotificationParser.toEntity(request.getBodyMessage());
-		paymentResultNotificationMapper.insertPaymentResultNotification(entity);
-		runAsync(request, PaymentResultNotificationParser.toMessage(entity), ESBAPIContextPathConstants.PAYMENT_RESULT_NOTIFICATION);
+	public void doAsyncPaymentResultNotification(ESBApiMessage apiMessage) {
+		setResponseApiMessage(apiMessage, TcpHeaderTransactionCode.VIEW_BILLING_DETAIL);
+		try {
+			PaymentResultNotificationEntity entity = PaymentResultNotificationParser.toEntity(apiMessage.getBodyMessage());
+			paymentResultNotificationMapper.insertPaymentResultNotification(entity);
+			runAsync(apiMessage, PaymentResultNotificationParser.toMessage(entity),
+					ESBAPIContextPathConstants.PAYMENT_RESULT_NOTIFICATION);
+		} catch (CustomException ce) {
+			throw ce;
+		} catch (Exception e) {
+			throw new CustomException(e.getMessage(), apiMessage, TcpStatusCode.SYSTEM_ERROR);
+		}
 	}
 
 	private void runAsync(ESBApiMessage request, String returnMessage, String contextPath) {
 		CompletableFuture.runAsync(() -> {
 			request.setBodyMessage(returnMessage);
-			callBackWebClient.post().uri(contextPath).contentType(MediaType.APPLICATION_JSON).bodyValue(request).retrieve()
-					.toBodilessEntity().doOnSuccess(r -> log.info("Callback success"))
+			callBackWebClient.post().uri(contextPath).contentType(MediaType.APPLICATION_JSON).bodyValue(request)
+					.retrieve().toBodilessEntity().doOnSuccess(r -> log.info("Callback success"))
 					.doOnError(e -> log.error("Callback failed", e)).subscribe();
 		});
 	}
 
+	private void setResponseApiMessage(ESBApiMessage apiMessage, TcpHeaderTransactionCode transactionCode) {
+		InterfaceSpec interfaceSpec = interfaceSpecList.findInterfaceInfo(sndCode, rcvCode, transactionCode.getCode());
+		String resInterfaceId = interfaceSpec.getInterfaceId();
+		String resEsbTxId = replaceTxId(apiMessage.getTransactionId(), resInterfaceId);
+		apiMessage.setInterfaceId(resInterfaceId);
+		apiMessage.setTransactionId(resEsbTxId);
+		apiMessage.setStatusCode(TcpStatusCode.SUCCESS.getCode());
+		apiMessage.setEsbErrorMessage(TcpStatusCode.SUCCESS.getDescription());
+	}
+
+	private String replaceTxId(String originalTxId, String resInterfaceId) {
+		String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+
+		int lastUnderscoreIndex = originalTxId.lastIndexOf('_');
+		if (lastUnderscoreIndex == -1) {
+			throw new IllegalArgumentException("잘못된 트랜잭션 ID 형식입니다.");
+		}
+
+		String suffix = originalTxId.substring(lastUnderscoreIndex);
+
+		return resInterfaceId + "_" + nowDateTime + suffix;
+	}
 }

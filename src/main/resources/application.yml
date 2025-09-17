@@ -19,10 +19,10 @@ tcp:
           host: 127.0.0.1
           port: 5555
           reconnect-delay-sec: 10
-        - system-code: TCS
-          host: 127.0.0.1
-          port: 7777
-          reconnect-delay-sec: 30
+#        - system-code: TCS
+#          host: 127.0.0.1
+#          port: 7777
+#          reconnect-delay-sec: 30
 spring:
   profiles:
     active: proxy
