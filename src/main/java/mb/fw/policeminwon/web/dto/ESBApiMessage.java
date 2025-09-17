@@ -1,11 +1,15 @@
 package mb.fw.policeminwon.web.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Builder
-public class ESBApiRequest {
+@NoArgsConstructor
+@AllArgsConstructor
+public class ESBApiMessage {
 
 	String interfaceId;
 	
@@ -14,4 +18,9 @@ public class ESBApiRequest {
 	String bodyMessage;
 	
 	String headerMessage;
+	
+	String statusCode;
+	
+	String esbErrorMessage;
+	
 }

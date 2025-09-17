@@ -29,7 +29,7 @@ import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
 import mb.fw.policeminwon.parser.slice.MessageSlice;
 import mb.fw.policeminwon.spec.InterfaceSpec;
 import mb.fw.policeminwon.spec.InterfaceSpecList;
-import mb.fw.policeminwon.web.dto.ESBApiRequest;
+import mb.fw.policeminwon.web.dto.ESBApiMessage;
 import reactor.core.publisher.Mono;
 
 @Slf4j
@@ -135,7 +135,7 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 		}
 
 		return webClient.post().uri(contextPath)
-				.bodyValue(ESBApiRequest.builder().headerMessage(header).bodyMessage(body).build()).retrieve()
+				.bodyValue(ESBApiMessage.builder().headerMessage(header).bodyMessage(body).build()).retrieve()
 				.bodyToMono(String.class).doOnNext(response -> log.info("API 응답: {}", response)).then();
 	}
 

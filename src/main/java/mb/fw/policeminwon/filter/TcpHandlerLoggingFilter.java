@@ -37,7 +37,7 @@ public class TcpHandlerLoggingFilter {
 		return action.doOnSubscribe(res -> log.info("[{}] 처리 시작", esbTxId)).doOnSuccess(res -> {
 			try {
 				if (jmsTemplate != null && interfaceSpec.isLogging()) {
-					ATBUtil.endLogging(jmsTemplate, interfaceSpec.getInterfaceId(), esbTxId, null, 0, "S", "SUCCESS",
+					ATBUtil.endLogging(jmsTemplate, interfaceSpec.getInterfaceId(), esbTxId, "", 0, "S", "SUCCESS",
 							null);
 				}
 			} catch (Exception e) {
@@ -47,7 +47,7 @@ public class TcpHandlerLoggingFilter {
 			log.error("Error during proxy server handler action : {}\n", error.getMessage(), error);
 			try {
 				if (jmsTemplate != null && interfaceSpec.isLogging()) {
-					ATBUtil.endLogging(jmsTemplate, interfaceSpec.getInterfaceId(), esbTxId, null, 1, "F",
+					ATBUtil.endLogging(jmsTemplate, interfaceSpec.getInterfaceId(), esbTxId, "", 1, "F",
 							error.getMessage(), null);
 				}
 			} catch (Exception e) {

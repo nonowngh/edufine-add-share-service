@@ -4,7 +4,7 @@ server:
 web:
   client:
     enabled: true
-    target-url: http://localhost:28000/esb/api/summary
+    target-url: http://localhost:28100/esb/api/summary
 
 tcp:
   server:
@@ -31,3 +31,24 @@ spring:
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+
+
+#server:
+#  port: 28100
+#
+#spring:
+#  profiles:
+#    active: summary
+#  main:
+#    allow-bean-definition-overriding: true
+#
+#web:
+#  client:
+#    enabled: true
+#    call-back-url: http://localhost:28000/esb/api/proxy
+#
+#mybatis:
+#  mapper-locations: classpath:ViewBillingDetailMapper.xml
+#  type-aliases-package: mb.fw.policeminwon.entity
+#  map-underscore-to-camel-case: true
+

@@ -22,6 +22,27 @@
         <property name="minEvictableIdleTimeMillis" value="2000000"/>
         <property name="numTestsPerEvictionRun" value="3"/>
     </bean>-->
+    
+    <!--    <bean class="org.apache.commons.dbcp.BasicDataSource" id="dataSource">
+        <description/>
+        <property name="url" value="jdbc:postgresql://127.0.0.1:5432/indigodb?encoding=null"/>
+        <property name="driverClassName" value="org.postgresql.Driver"/>
+        <property name="username" value="indigo"/>
+        <property name="password" value="meta1234"/>
+        <property name="defaultAutoCommit" value="true"/>
+        <property name="maxWait" value="0"/>
+        <property name="initialSize" value="1"/>
+        <property name="maxActive" value="10"/>
+        <property name="minIdle" value="0"/>
+        <property name="maxIdle" value="8"/>
+        <property name="validationQuery" value=""/>
+        <property name="testOnBorrow" value="true"/>
+        <property name="testOnReturn" value="true"/>
+        <property name="testWhileIdle" value="true"/>
+        <property name="timeBetweenEvictionRunsMillis" value="0"/>
+        <property name="minEvictableIdleTimeMillis" value="2000000"/>
+        <property name="numTestsPerEvictionRun" value="3"/>
+    </bean>-->
 
     <bean class="com.indigo.indigomq.pool.PooledConnectionFactory"
           destroy-method="stop" id="jmsConnectionFactory">

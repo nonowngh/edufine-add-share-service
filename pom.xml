@@ -10,7 +10,7 @@
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>mb.fw</groupId>
-	<artifactId>atb</artifactId>
+	<artifactId>atb-police</artifactId>
 	<version>1.0.2</version>
 	<name>atb</name>
 	<description>Metabuild Inc, Made By clupine, AdaptorTemplateBoot Ver 1.0.2</description>
@@ -231,6 +231,11 @@
 			<artifactId>opentelemetry-sdk</artifactId>
 			<version>1.30.0</version>
 		</dependency>
+		<dependency>
+    <groupId>org.postgresql</groupId>
+    <artifactId>postgresql</artifactId>
+    <version>42.7.3</version> <!-- 최신 버전 기준 (2025년 현재) -->
+</dependency>
 	</dependencies>
 
 	<build>

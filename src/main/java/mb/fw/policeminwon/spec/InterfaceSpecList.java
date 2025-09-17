@@ -21,4 +21,12 @@ public class InterfaceSpecList {
 				.findFirst().orElseThrow(() -> new IllegalStateException("해당하는 인터페이스 정보를 찾을 수 없습니다. " + "sndCode: "
 						+ sndCode + ", rcvCode: " + rcvCode + ", messageCode: " + messageCode));
 	}
+
+	/**
+	 * interfaceId에 맞는 InterfaceInfo 찾기
+	 */
+	public InterfaceSpec findInterfaceInfo(String interfaceId) {
+		return interfaceInfo.stream().filter(info -> info.getInterfaceId().equals(interfaceId)).findFirst().orElseThrow(
+				() -> new IllegalStateException("해당하는 인터페이스 정보를 찾을 수 없습니다. " + "interfaceId: " + interfaceId));
+	}
 }
