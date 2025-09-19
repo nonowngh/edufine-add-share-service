@@ -20,6 +20,8 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import mb.fw.policeminwon.constants.TcpMessageLoggingConstants;
@@ -148,9 +150,8 @@ public class AsyncConnectionClient {
 				}
 			}
 		} finally {
-			if (outBuf.refCnt() > 0) {
-				outBuf.release();
-			}
+			if (((ReferenceCounted) outBuf).refCnt() > 0)
+				ReferenceCountUtil.release(outBuf);
 		}
 	}
 }

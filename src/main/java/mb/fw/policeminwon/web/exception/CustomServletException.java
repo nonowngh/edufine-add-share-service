@@ -5,7 +5,7 @@ import mb.fw.policeminwon.constants.TcpStatusCode;
 import mb.fw.policeminwon.web.dto.ESBApiMessage;
 
 @Getter
-public class CustomException extends RuntimeException {
+public class CustomServletException extends RuntimeException {
 	/**
 	 * 
 	 */
@@ -13,7 +13,7 @@ public class CustomException extends RuntimeException {
 	private final ESBApiMessage apiMessage;
 	private final TcpStatusCode statusCode;
 
-    public CustomException(String errorMessage, ESBApiMessage apiMessage, TcpStatusCode statusCode) {
+    public CustomServletException(String errorMessage, ESBApiMessage apiMessage, TcpStatusCode statusCode) {
         super(errorMessage);
         this.apiMessage = apiMessage;
         this.statusCode = statusCode;

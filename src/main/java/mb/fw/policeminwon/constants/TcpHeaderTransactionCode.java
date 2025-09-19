@@ -24,6 +24,6 @@ public enum TcpHeaderTransactionCode {
 
 	public static TcpHeaderTransactionCode fromCode(String code) {
 		return Arrays.stream(TcpHeaderTransactionCode.values()).filter(value -> value.getCode().equals(code))
-				.findFirst().orElseThrow(() -> new IllegalArgumentException("Invalid transaction-code: " + code));
+				.findFirst().orElse(null);
 	}
 }

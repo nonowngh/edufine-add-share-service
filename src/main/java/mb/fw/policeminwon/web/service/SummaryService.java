@@ -22,7 +22,7 @@ import mb.fw.policeminwon.parser.ViewBillingDetailParser;
 import mb.fw.policeminwon.spec.InterfaceSpec;
 import mb.fw.policeminwon.spec.InterfaceSpecList;
 import mb.fw.policeminwon.web.dto.ESBApiMessage;
-import mb.fw.policeminwon.web.exception.CustomException;
+import mb.fw.policeminwon.web.exception.CustomServletException;
 import mb.fw.policeminwon.web.mapper.PaymentResultNotificationMapper;
 import mb.fw.policeminwon.web.mapper.ViewBillingDetailMapper;
 
@@ -55,14 +55,14 @@ public class SummaryService {
 			String elecPayNo = ViewBillingDetailParser.toEntity(apiMessage.getBodyMessage()).getElecPayNo();
 			ViewBillingDetailEntity entity = Optional
 					.ofNullable(viewBillingDetailMapper.selectBillingDetailByElecPayNo(elecPayNo))
-					.orElseThrow(() -> new CustomException("elecPayNo '" + elecPayNo + "' 해당하는 정보가 없음", apiMessage,
+					.orElseThrow(() -> new CustomServletException("elecPayNo '" + elecPayNo + "' 해당하는 정보가 없음", apiMessage,
 							TcpStatusCode.NO_BILLING_RECORDS));
 			runAsync(apiMessage, ViewBillingDetailParser.toMessage(entity),
 					ESBAPIContextPathConstants.VIEW_VIEW_BILLING_DETAIL);
-		} catch (CustomException ce) {
+		} catch (CustomServletException ce) {
 			throw ce;
 		} catch (Exception e) {
-			throw new CustomException(e.getMessage(), apiMessage, TcpStatusCode.SYSTEM_ERROR);
+			throw new CustomServletException(e.getMessage(), apiMessage, TcpStatusCode.SYSTEM_ERROR);
 		}
 	}
 
@@ -73,10 +73,10 @@ public class SummaryService {
 			paymentResultNotificationMapper.insertPaymentResultNotification(entity);
 			runAsync(apiMessage, PaymentResultNotificationParser.toMessage(entity),
 					ESBAPIContextPathConstants.PAYMENT_RESULT_NOTIFICATION);
-		} catch (CustomException ce) {
+		} catch (CustomServletException ce) {
 			throw ce;
 		} catch (Exception e) {
-			throw new CustomException(e.getMessage(), apiMessage, TcpStatusCode.SYSTEM_ERROR);
+			throw new CustomServletException(e.getMessage(), apiMessage, TcpStatusCode.SYSTEM_ERROR);
 		}
 	}
 

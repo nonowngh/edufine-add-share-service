@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import io.netty.buffer.Unpooled;
 import mb.fw.policeminwon.constants.ByteEncodingConstants;
 import mb.fw.policeminwon.constants.SystemCodeConstatns;
+import mb.fw.policeminwon.constants.TcpStatusCode;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
 import mb.fw.policeminwon.parser.CommonHeaderParser;
 import mb.fw.policeminwon.utils.ByteBufUtils;
@@ -23,22 +24,26 @@ public class ProxyService {
 	public ProxyService(List<AsyncConnectionClient> clients) {
 		client = clients.stream().filter(client -> client.getSystemCode().equals(targetSystemCode)).findFirst()
 				.orElseThrow(() -> new IllegalStateException("Tcp 클라이언트를 찾을 수 없습니다. 시스템 코드: " + targetSystemCode));
-//		if (client == null)
-//			log.error("사용가능한 'AsyncConnectionClient'가 없습니다.");
-//		() -> new IllegalStateException("Tcp 클라이언트를 찾을 수 없습니다. 시스템 코드: " + targetSystemCode));
 	}
 
 	public void sendResponseViewBillingDetail(String tcpHeaderMessage, String tcpBodyMessage, String esbTransactionId)
 			throws Exception {
 		client.callAsync(ByteBufUtils.addMessageLength(Unpooled.wrappedBuffer(
-				CommonHeaderParser.responseHeader(tcpHeaderMessage, "0210", "000", esbTransactionId),
+				CommonHeaderParser.responseHeader(tcpHeaderMessage, "0210", TcpStatusCode.SUCCESS.getCode(), esbTransactionId),
 				Unpooled.copiedBuffer(tcpBodyMessage, ByteEncodingConstants.CHARSET))));
 	}
 
 	public void sendResponsePaymentResultNotificaiton(String tcpHeaderMessage, String tcpBodyMessage,
 			String esbTransactionId) throws Exception {
 		client.callAsync(ByteBufUtils.addMessageLength(Unpooled.wrappedBuffer(
-				CommonHeaderParser.responseHeader(tcpHeaderMessage, "0210", "000", esbTransactionId),
+				CommonHeaderParser.responseHeader(tcpHeaderMessage, "0210", TcpStatusCode.SUCCESS.getCode(), esbTransactionId),
+				Unpooled.copiedBuffer(tcpBodyMessage, ByteEncodingConstants.CHARSET))));
+	}
+	
+	public void sendResponseCancelPayment(String tcpHeaderMessage, String tcpBodyMessage,
+			String esbTransactionId) throws Exception {
+		client.callAsync(ByteBufUtils.addMessageLength(Unpooled.wrappedBuffer(
+				CommonHeaderParser.responseHeader(tcpHeaderMessage, "0430", TcpStatusCode.SUCCESS.getCode(), esbTransactionId),
 				Unpooled.copiedBuffer(tcpBodyMessage, ByteEncodingConstants.CHARSET))));
 	}
 

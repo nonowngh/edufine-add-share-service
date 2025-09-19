@@ -16,7 +16,11 @@ public class MessageSlice {
 	}
 
 	public static String getHeaderMessage(ByteBuf buf) {
-		return ByteBufUtils.getStringfromBytebuf(buf, 4, 70);
+		int totalBufSize = buf.readableBytes();
+		if (totalBufSize < HEADER_LENGTH)
+			return ByteBufUtils.getStringfromBytebuf(buf, 4, totalBufSize);
+		else
+			return ByteBufUtils.getStringfromBytebuf(buf, 4, 70);
 	}
 
 	// 전자납부번호(body index 0 ~ 19)

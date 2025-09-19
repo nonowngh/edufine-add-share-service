@@ -7,6 +7,7 @@ import org.springframework.context.annotation.ImportResource;
 
 import com.mb.indigo2.springsupport.AdaptorConfig;
 
+import io.netty.util.ResourceLeakDetector;
 import lombok.extern.slf4j.Slf4j;
 import mb.fw.adaptor.util.AdaptorStarter;
 import mb.fw.atb.util.MDCLogging;
@@ -18,12 +19,12 @@ import mb.fw.atb.util.MDCLogging;
 	public class PoliceMinwonApplication {
 
 	public static void main(String[] args) throws Exception {
-//		ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
-        System.setProperty("javax.xml.parsers.DocumentBuilderFactory", "com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl");
-        AdaptorStarter.init();
-        String adaptorName = AdaptorConfig.getInstance().getAdaptorName();
-        log.info("adaptorName: {}", adaptorName);
-        MDCLogging.create("NONE", "NONE", adaptorName);
+		ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
+//        System.setProperty("javax.xml.parsers.DocumentBuilderFactory", "com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl");
+//        AdaptorStarter.init();
+//        String adaptorName = AdaptorConfig.getInstance().getAdaptorName();
+//        log.info("adaptorName: {}", adaptorName);
+//        MDCLogging.create("NONE", "NONE", adaptorName);
         SpringApplication.run(PoliceMinwonApplication.class, args);
 	}
 }
