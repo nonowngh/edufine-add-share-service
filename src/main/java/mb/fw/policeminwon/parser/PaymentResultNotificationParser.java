@@ -2,7 +2,7 @@ package mb.fw.policeminwon.parser;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import mb.fw.policeminwon.constants.ByteEncodingConstants;
+import mb.fw.policeminwon.constants.TcpCommonSettingConstants;
 import mb.fw.policeminwon.entity.PaymentResultNotificationEntity;
 import mb.fw.policeminwon.utils.ByteBufUtils;
 
@@ -11,7 +11,7 @@ import mb.fw.policeminwon.utils.ByteBufUtils;
  */
 public class PaymentResultNotificationParser {
 	public static PaymentResultNotificationEntity toEntity(String data) {
-		ByteBuf buf = Unpooled.copiedBuffer(data, ByteEncodingConstants.CHARSET);
+		ByteBuf buf = Unpooled.copiedBuffer(data, TcpCommonSettingConstants.MESSAGE_CHARSET);
 		PaymentResultNotificationEntity entity = new PaymentResultNotificationEntity();
 		int offset = 0;
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setObligorRegNo, buf, offset, 13); // 납부의무자 주민(사업자, 법인) 등록번호 (AN, 13)
@@ -53,6 +53,6 @@ public class PaymentResultNotificationParser {
 	    ByteBufUtils.writeRightPaddingString(buf, entity.getPrePaySystem(), 1);
 	    ByteBufUtils.writeRightPaddingString(buf, entity.getPayType(), 1);
 	    ByteBufUtils.writeRightPaddingString(buf, entity.getReserveField7(), 15);
-	    return buf.toString(ByteEncodingConstants.CHARSET);
+	    return buf.toString(TcpCommonSettingConstants.MESSAGE_CHARSET);
 	}
 }

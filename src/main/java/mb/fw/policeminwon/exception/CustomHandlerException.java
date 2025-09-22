@@ -1,4 +1,4 @@
-package mb.fw.policeminwon.web.exception;
+package mb.fw.policeminwon.exception;
 
 import lombok.Getter;
 import mb.fw.policeminwon.constants.TcpStatusCode;

@@ -9,8 +9,7 @@ import org.springframework.context.annotation.Configuration;
 
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import mb.fw.policeminwon.constants.ByteEncodingConstants;
-import mb.fw.policeminwon.constants.TcpMessageLoggingConstants;
+import mb.fw.policeminwon.constants.TcpCommonSettingConstants;
 
 @Slf4j
 @Data
@@ -24,10 +23,10 @@ public class TcpCommonConfiguration {
 	@PostConstruct
 	public void init() {
 		// set Charset...
-		ByteEncodingConstants.CHARSET = Charset.forName(encoding);
-		log.info("Setting Default Charset : " + ByteEncodingConstants.CHARSET.name());
+		TcpCommonSettingConstants.MESSAGE_CHARSET = Charset.forName(encoding);
+		log.info("Setting Default Charset : " + TcpCommonSettingConstants.MESSAGE_CHARSET.name());
 		// set tcp message pretty logging...
-		TcpMessageLoggingConstants.prettyLogging = prettyLogging;
+		TcpCommonSettingConstants.PRETTY_LOGGING = prettyLogging;
 	}
 
 }

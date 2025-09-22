@@ -6,8 +6,8 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import io.netty.buffer.Unpooled;
-import mb.fw.policeminwon.constants.ByteEncodingConstants;
-import mb.fw.policeminwon.constants.SystemCodeConstatns;
+import mb.fw.policeminwon.constants.SystemCodeConstants;
+import mb.fw.policeminwon.constants.TcpCommonSettingConstants;
 import mb.fw.policeminwon.constants.TcpStatusCode;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
 import mb.fw.policeminwon.parser.CommonHeaderParser;
@@ -17,7 +17,7 @@ import mb.fw.policeminwon.utils.ByteBufUtils;
 @Profile("proxy")
 public class ProxyService {
 
-	private final String targetSystemCode = SystemCodeConstatns.KFTC;
+	private final String targetSystemCode = SystemCodeConstants.KFTC;
 
 	private final AsyncConnectionClient client;
 
@@ -30,21 +30,21 @@ public class ProxyService {
 			throws Exception {
 		client.callAsync(ByteBufUtils.addMessageLength(Unpooled.wrappedBuffer(
 				CommonHeaderParser.responseHeader(tcpHeaderMessage, "0210", TcpStatusCode.SUCCESS.getCode(), esbTransactionId),
-				Unpooled.copiedBuffer(tcpBodyMessage, ByteEncodingConstants.CHARSET))));
+				Unpooled.copiedBuffer(tcpBodyMessage, TcpCommonSettingConstants.MESSAGE_CHARSET))));
 	}
 
 	public void sendResponsePaymentResultNotificaiton(String tcpHeaderMessage, String tcpBodyMessage,
 			String esbTransactionId) throws Exception {
 		client.callAsync(ByteBufUtils.addMessageLength(Unpooled.wrappedBuffer(
 				CommonHeaderParser.responseHeader(tcpHeaderMessage, "0210", TcpStatusCode.SUCCESS.getCode(), esbTransactionId),
-				Unpooled.copiedBuffer(tcpBodyMessage, ByteEncodingConstants.CHARSET))));
+				Unpooled.copiedBuffer(tcpBodyMessage, TcpCommonSettingConstants.MESSAGE_CHARSET))));
 	}
 	
 	public void sendResponseCancelPayment(String tcpHeaderMessage, String tcpBodyMessage,
 			String esbTransactionId) throws Exception {
 		client.callAsync(ByteBufUtils.addMessageLength(Unpooled.wrappedBuffer(
 				CommonHeaderParser.responseHeader(tcpHeaderMessage, "0430", TcpStatusCode.SUCCESS.getCode(), esbTransactionId),
-				Unpooled.copiedBuffer(tcpBodyMessage, ByteEncodingConstants.CHARSET))));
+				Unpooled.copiedBuffer(tcpBodyMessage, TcpCommonSettingConstants.MESSAGE_CHARSET))));
 	}
 
 	public void sendResponseError(String tcpHeaderMessage, String statusCode, String esbTransactionId)

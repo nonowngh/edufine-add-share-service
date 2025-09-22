@@ -3,12 +3,10 @@ package mb.fw.policeminwon.parser;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-import org.crsh.console.jline.internal.Log;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import lombok.extern.slf4j.Slf4j;
-import mb.fw.policeminwon.constants.ByteEncodingConstants;
+import mb.fw.policeminwon.constants.TcpCommonSettingConstants;
 import mb.fw.policeminwon.utils.ByteBufUtils;
 
 @Slf4j
@@ -19,7 +17,7 @@ public class CommonHeaderParser {
 	// String 사용, 전체 헤더 길이 70 bytes(길이 필드 제외)
 	public static ByteBuf responseHeader(String headerMessage, String messageTypeCode, String statusCode,
 			String policeTransactionId) {
-		ByteBuf reqBuf = Unpooled.copiedBuffer(headerMessage, ByteEncodingConstants.CHARSET);
+		ByteBuf reqBuf = Unpooled.copiedBuffer(headerMessage, TcpCommonSettingConstants.MESSAGE_CHARSET);
 		ByteBuf resBuf = Unpooled.buffer(HEADER_LENGTH - 4);
 		try {
 			resBuf.writeBytes(ByteBufUtils.getStringfromBytebuf(reqBuf, 0, 3).getBytes()); // 업무구분(3)

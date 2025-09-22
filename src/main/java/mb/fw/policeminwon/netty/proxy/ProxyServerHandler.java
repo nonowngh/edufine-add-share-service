@@ -21,13 +21,13 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import lombok.extern.slf4j.Slf4j;
 import mb.fw.atb.util.TransactionIdGenerator;
-import mb.fw.policeminwon.constants.ByteEncodingConstants;
 import mb.fw.policeminwon.constants.ESBAPIContextPathConstants;
-import mb.fw.policeminwon.constants.SystemCodeConstatns;
-import mb.fw.policeminwon.constants.TcpBodyConstatns;
-import mb.fw.policeminwon.constants.TcpHeaderSrFlag;
+import mb.fw.policeminwon.constants.SystemCodeConstants;
+import mb.fw.policeminwon.constants.TcpCommonSettingConstants;
 import mb.fw.policeminwon.constants.TcpHeaderTransactionCode;
+import mb.fw.policeminwon.constants.TcpMessageConstants;
 import mb.fw.policeminwon.constants.TcpStatusCode;
+import mb.fw.policeminwon.exception.CustomHandlerException;
 import mb.fw.policeminwon.filter.TcpHandlerLoggingFilter;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
 import mb.fw.policeminwon.parser.CommonHeaderParser;
@@ -35,9 +35,9 @@ import mb.fw.policeminwon.parser.slice.MessageSlice;
 import mb.fw.policeminwon.spec.InterfaceSpec;
 import mb.fw.policeminwon.spec.InterfaceSpecList;
 import mb.fw.policeminwon.utils.ByteBufUtils;
+import mb.fw.policeminwon.utils.CommonLoggingUtils;
 import mb.fw.policeminwon.utils.TransactionSequenceGenerator;
 import mb.fw.policeminwon.web.dto.ESBApiMessage;
-import mb.fw.policeminwon.web.exception.CustomHandlerException;
 import reactor.core.publisher.Mono;
 
 @Slf4j
@@ -71,19 +71,20 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 					.fromCode(MessageSlice.getTransactionCode(inBuf));
 			if (tcpHeaderTransactionCode == null)
 				throw new CustomHandlerException("Invalid transaction-code: " + MessageSlice.getTransactionCode(inBuf),
-						TcpStatusCode.FORMAT_ERROR, SystemCodeConstatns.KFTC, MessageSlice.getHeaderMessage(inBuf));
+						TcpStatusCode.FORMAT_ERROR, SystemCodeConstants.KFTC, MessageSlice.getHeaderMessage(inBuf));
 			log.info("KFTC transaction-code -> [{}]", tcpHeaderTransactionCode.getCode());
 			String srFlag = MessageSlice.getSrFlag(inBuf);
-			String sndCode = TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstatns.KFTC
-					: SystemCodeConstatns.TRAFFIC;
-			String rcvCode = TcpHeaderSrFlag.KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstatns.TRAFFIC
-					: SystemCodeConstatns.KFTC;
+			String sndCode = TcpMessageConstants.SRFLAG_KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstants.KFTC
+					: SystemCodeConstants.TRAFFIC;
+			String rcvCode = TcpMessageConstants.SRFLAG_KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstants.TRAFFIC
+					: SystemCodeConstants.KFTC;
 			if (panaltyTransactionCode.contains(tcpHeaderTransactionCode)) {
 				String policeSystemCode = MessageSlice.getElecPayNo(inBuf);
-				if (policeSystemCode.startsWith(TcpBodyConstatns.getSJSElecNumType())) {
-					rcvCode = SystemCodeConstatns.SUMMRAY;
+				if (policeSystemCode.startsWith(TcpMessageConstants.getSJSElecNumType())) {
+					rcvCode = SystemCodeConstants.SUMMRAY;
 				}
 			}
+			String responseCode = MessageSlice.getResponseCode(inBuf);
 			InterfaceSpec interfaceSpec = interfaceSpecList.findInterfaceInfo(sndCode, rcvCode,
 					tcpHeaderTransactionCode.getCode());
 			String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
@@ -101,10 +102,10 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			// 납부 (재)취소
 			actions.put(TcpHeaderTransactionCode.CANCEL_PAYMENT, cancelProcess(inBuf, interfaceSpec, esbTxId));
 
-			Mono<Void> action = actions.getOrDefault(tcpHeaderTransactionCode.getCode(), Mono.error(
+			Mono<Void> action = actions.getOrDefault(tcpHeaderTransactionCode, Mono.error(
 					new IllegalArgumentException("Invalid transaction-code -> " + tcpHeaderTransactionCode.getCode())));
 			Mono<Void> filteredAction = TcpHandlerLoggingFilter.routeLoggingFilter(action, interfaceSpec, jmsTemplate,
-					esbTxId, nowDateTime);
+					esbTxId, nowDateTime, responseCode);
 			filteredAction.subscribe();
 		} finally {
 			if (((ReferenceCounted) msg).refCnt() > 0)
@@ -114,7 +115,7 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 
 	private Mono<Void> cancelProcess(ByteBuf inBuf, InterfaceSpec interfaceSpec, String esbTxId) {
 		return Mono.fromRunnable(() -> getTcpClientAndSendMessage(interfaceSpec.getRcvCode(), inBuf))
-				.then(SystemCodeConstatns.KFTC.equals(interfaceSpec.getSndCode())
+				.then(SystemCodeConstants.KFTC.equals(interfaceSpec.getSndCode())
 						? esbApiCall(MessageSlice.getHeaderMessage(inBuf),
 								MessageSlice.getCancelPaymentTotalBody((inBuf)),
 								ESBAPIContextPathConstants.CANCEL_PAYMENT, interfaceSpec.getInterfaceId(), esbTxId)
@@ -123,7 +124,7 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 
 	private Mono<Void> penaltyProcess(ByteBuf inBuf, InterfaceSpec interfaceSpec, String esbTxId) {
 		String rcvCode = interfaceSpec.getRcvCode();
-		if (SystemCodeConstatns.SUMMRAY.equals(rcvCode)) {
+		if (SystemCodeConstants.SUMMRAY.equals(rcvCode)) {
 			// 고지내역 상세조회
 			if (TcpHeaderTransactionCode.VIEW_BILLING_DETAIL.getCode().equals(interfaceSpec.getMessageCode()))
 				return esbApiCall(MessageSlice.getHeaderMessage(inBuf),
@@ -142,8 +143,8 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 
 	private Mono<Void> testCall(ByteBuf inBuf, InterfaceSpec interfaceSpec) {
 		if (directTestCallReturn != null) {
-			return getTcpClientAndSendMessage(SystemCodeConstatns.KFTC,
-					Unpooled.copiedBuffer(directTestCallReturn, ByteEncodingConstants.CHARSET));
+			return getTcpClientAndSendMessage(SystemCodeConstants.KFTC,
+					Unpooled.copiedBuffer(directTestCallReturn, TcpCommonSettingConstants.MESSAGE_CHARSET));
 		} else {
 			return getTcpClientAndSendMessage(interfaceSpec.getRcvCode(), inBuf);
 		}
@@ -158,7 +159,7 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 		return webClient.post().uri(contextPath)
 				.bodyValue(ESBApiMessage.builder().interfaceId(interfaceId).transactionId(esbTxId).headerMessage(header)
 						.bodyMessage(body).build())
-				.retrieve().bodyToMono(String.class).doOnNext(response -> log.info("API 응답: {}", response)).then();
+				.retrieve().bodyToMono(String.class).doOnNext(response -> log.info("ESB API response : {}", response)).then();
 	}
 
 	private Mono<Void> getTcpClientAndSendMessage(String targetSystemCode, ByteBuf inBuf) {
@@ -189,10 +190,12 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			CustomHandlerException ex = (CustomHandlerException) cause;
 			String targetSystemCode = ex.getSystemCode();
 			String tcpHeaderMessage = ex.getHeaderMessage();
+			CommonLoggingUtils.loggingTcpResponse(ex.getStatusCode().getCode());
 			getTcpClientAndSendMessage(targetSystemCode,
 					ByteBufUtils.addMessageLength(Unpooled.copiedBuffer(
 							CommonHeaderParser.responseHeader(tcpHeaderMessage, "", ex.getStatusCode().getCode(), ""))))
 					.subscribe();
 		}
 	}
+
 }

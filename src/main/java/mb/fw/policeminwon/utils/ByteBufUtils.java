@@ -6,20 +6,20 @@ import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import mb.fw.policeminwon.constants.ByteEncodingConstants;
+import mb.fw.policeminwon.constants.TcpCommonSettingConstants;
 
 public class ByteBufUtils {
 
 	public static String getStringfromBytebuf(ByteBuf buf, int statrtIdx, int length) {
-		return buf.toString(statrtIdx, length, ByteEncodingConstants.CHARSET);
+		return buf.toString(statrtIdx, length, TcpCommonSettingConstants.MESSAGE_CHARSET);
 	}
 	
 	public static String getStringValuefromByteBuf(ByteBuf buf, int statrtIdx, int length) {
-		return buf.slice(statrtIdx, length).toString(ByteEncodingConstants.CHARSET).trim();
+		return buf.slice(statrtIdx, length).toString(TcpCommonSettingConstants.MESSAGE_CHARSET).trim();
 	}
 	
 	public static Integer getIntegerValuefromByteBuf(ByteBuf buf, int statrtIdx, int length) {
-		return Integer.valueOf(buf.slice(statrtIdx, length).toString(ByteEncodingConstants.CHARSET));
+		return Integer.valueOf(buf.slice(statrtIdx, length).toString(TcpCommonSettingConstants.MESSAGE_CHARSET));
 	}
 	
 	public static int setStringAndMoveOffset(Consumer<String> setter, ByteBuf buf, int start, int length) {
@@ -35,7 +35,7 @@ public class ByteBufUtils {
 	}
 	
 	public static void writeRightPaddingString(ByteBuf buf, String value, int fixedLength) {
-	    byte[] rawBytes = value.getBytes(ByteEncodingConstants.CHARSET);
+	    byte[] rawBytes = value.getBytes(TcpCommonSettingConstants.MESSAGE_CHARSET);
 	    int paddingLength = fixedLength - rawBytes.length;
 
 	    if (paddingLength < 0) {

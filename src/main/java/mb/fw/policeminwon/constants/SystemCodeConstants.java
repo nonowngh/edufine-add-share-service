@@ -1,8 +1,8 @@
 package mb.fw.policeminwon.constants;
 
-public class SystemCodeConstatns {
+public class SystemCodeConstants {
 
-	private SystemCodeConstatns() {
+	private SystemCodeConstants() {
 	}
 
 	// 금결원 시스템 코드

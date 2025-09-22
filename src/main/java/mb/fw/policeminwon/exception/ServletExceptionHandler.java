@@ -1,6 +1,5 @@
-package mb.fw.policeminwon.web.exception;
+package mb.fw.policeminwon.exception;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,17 +8,13 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import io.netty.buffer.Unpooled;
 import lombok.extern.slf4j.Slf4j;
 import mb.fw.policeminwon.constants.ESBAPIContextPathConstants;
-import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
-import mb.fw.policeminwon.parser.CommonHeaderParser;
-import mb.fw.policeminwon.utils.ByteBufUtils;
 import mb.fw.policeminwon.web.dto.ESBApiMessage;
 
 @Slf4j
 @RestControllerAdvice
-public class SummaryExceptionHandler {
+public class ServletExceptionHandler {
 
 	@Autowired(required = false)
 	WebClient callBackWebClient;

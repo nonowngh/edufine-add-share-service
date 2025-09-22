@@ -23,6 +23,11 @@ public class MessageSlice {
 			return ByteBufUtils.getStringfromBytebuf(buf, 4, 70);
 	}
 
+	// 응답코드
+	public static String getResponseCode(ByteBuf buf) {
+		return ByteBufUtils.getStringfromBytebuf(buf, 24, 3);
+	}
+
 	// 전자납부번호(body index 0 ~ 19)
 	public static String getElecPayNo(ByteBuf buf) {
 		return ByteBufUtils.getStringfromBytebuf(buf, HEADER_LENGTH, 19);

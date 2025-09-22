@@ -3,7 +3,7 @@ package mb.fw.policeminwon.parser;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import lombok.extern.slf4j.Slf4j;
-import mb.fw.policeminwon.constants.ByteEncodingConstants;
+import mb.fw.policeminwon.constants.TcpCommonSettingConstants;
 import mb.fw.policeminwon.entity.ViewBillingDetailEntity;
 import mb.fw.policeminwon.utils.ByteBufUtils;
 
@@ -13,7 +13,7 @@ import mb.fw.policeminwon.utils.ByteBufUtils;
 @Slf4j
 public class ViewBillingDetailParser {
 	public static ViewBillingDetailEntity toEntity(String data) {
-		ByteBuf buf = Unpooled.copiedBuffer(data, ByteEncodingConstants.CHARSET);
+		ByteBuf buf = Unpooled.copiedBuffer(data, TcpCommonSettingConstants.MESSAGE_CHARSET);
 		ViewBillingDetailEntity entity = new ViewBillingDetailEntity();
 		System.out.println(buf.readableBytes());
 		int offset = 0;
@@ -94,6 +94,6 @@ public class ViewBillingDetailParser {
 	    ByteBufUtils.writeRightPaddingString(buf, entity.getObligorName(), 8);
 	    ByteBufUtils.writeRightPaddingString(buf, entity.getCardPayYn(), 1);
 	    ByteBufUtils.writeRightPaddingString(buf, entity.getReserveField6(), 18);
-	    return buf.toString(ByteEncodingConstants.CHARSET);
+	    return buf.toString(TcpCommonSettingConstants.MESSAGE_CHARSET);
 	}
 }

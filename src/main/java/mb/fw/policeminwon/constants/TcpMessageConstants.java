@@ -2,8 +2,11 @@ package mb.fw.policeminwon.constants;
 
 import java.time.LocalDate;
 
-public class TcpBodyConstatns {
+public class TcpMessageConstants {
 
+	private TcpMessageConstants() {
+	}
+	
 	private static final String PREFIX = "0137";
     private static final String SUFFIX = "3";
     
@@ -12,4 +15,11 @@ public class TcpBodyConstatns {
         int currentYear = LocalDate.now().getYear();
         return PREFIX + currentYear + SUFFIX;
     }
+	
+	//송수신 플래그 금결원
+	public static final String SRFLAG_KFTC = "C";
+	
+	//송수신 플래그 경찰청
+	public static final String SRFLAG_POLICE = "G";
+
 }

@@ -16,7 +16,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
-import mb.fw.policeminwon.constants.TcpMessageLoggingConstants;
+import mb.fw.policeminwon.constants.TcpCommonSettingConstants;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
 import mb.fw.policeminwon.spec.InterfaceSpecList;
 
@@ -58,7 +58,7 @@ public class ProxyServer {
 							protected void initChannel(SocketChannel ch) {
 //                    	 ch.pipeline().addLast(new mb.fw.net.common.codec.LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4, true));
 								ch.pipeline().addLast(
-										TcpMessageLoggingConstants.prettyLogging ? new PrettyLoggingHandler(LogLevel.INFO)
+										TcpCommonSettingConstants.PRETTY_LOGGING ? new PrettyLoggingHandler(LogLevel.INFO)
 												: new LoggingHandler(LogLevel.INFO),
 										new ProxyServerHandler(clients, webClient, interfaceSpecList, jmsTemplate,
 												directTestCallReturn));

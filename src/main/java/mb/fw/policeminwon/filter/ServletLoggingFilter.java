@@ -18,11 +18,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
 import mb.fw.atb.util.ATBUtil;
-import mb.fw.policeminwon.constants.SystemCodeConstatns;
 import mb.fw.policeminwon.constants.TcpStatusCode;
 import mb.fw.policeminwon.filter.wrapper.CachedBodyHttpServletRequest;
 import mb.fw.policeminwon.spec.InterfaceSpec;
 import mb.fw.policeminwon.spec.InterfaceSpecList;
+import mb.fw.policeminwon.utils.CommonLoggingUtils;
 import mb.fw.policeminwon.web.dto.ESBApiMessage;
 
 @Slf4j
@@ -61,7 +61,7 @@ public class ServletLoggingFilter implements Filter {
 		String to = interfaceSpec.getRcvCode();
 		String description = interfaceSpec.getDescription();
 
-		logTransaction(description, from, to, esbTxId);
+		CommonLoggingUtils.logTransaction(description, from, to, esbTxId);
 
 		if (jmsTemplate != null && interfaceSpec.isLogging()) {
 			String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
@@ -73,8 +73,9 @@ public class ServletLoggingFilter implements Filter {
 			}
 		}
 		String statusCd = TcpStatusCode.SUCCESS.getCode().equals(apiRequest.getStatusCode()) ? "S" : "F";
-		String errorMsg = apiRequest.getEsbErrorMessage();
+		String errorMsg = "[" + apiRequest.getStatusCode() + "]" + apiRequest.getEsbErrorMessage();
 		int errorCnt = statusCd == "S" ? 0 : 1;
+		CommonLoggingUtils.loggingTcpResponse(apiRequest.getStatusCode());
 		// 필터 후 처리를 위해 chain.doFilter 호출
 		try {
 			chain.doFilter(cachedRequest, response);
@@ -93,16 +94,6 @@ public class ServletLoggingFilter implements Filter {
 				log.error("JMS end logging error!!!", e);
 			}
 			log.info("===[{}] 처리 종료===", esbTxId);
-		}
-	}
-
-	private static void logTransaction(String description, String from, String to, String esbTxId) {
-		if (SystemCodeConstatns.SUMMRAY.equals(to)) {
-			log.info("{} - api call...[{}] -> [{}] | esb-tran-id({})", description, from, to, esbTxId);
-		} else if (SystemCodeConstatns.SUMMRAY.equals(from)) {
-			log.info("{} - tcp send...[{}] -> [{}] | esb-tran-id({})", description, from, to, esbTxId);
-		} else {
-			log.info("{} - bypass...[{}] -> [{}] | esb-tran-id({})", description, from, to, esbTxId);
 		}
 	}
 

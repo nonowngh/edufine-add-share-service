@@ -12,17 +12,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import mb.fw.policeminwon.constants.ESBAPIContextPathConstants;
-import mb.fw.policeminwon.constants.SystemCodeConstatns;
+import mb.fw.policeminwon.constants.SystemCodeConstants;
 import mb.fw.policeminwon.constants.TcpHeaderTransactionCode;
 import mb.fw.policeminwon.constants.TcpStatusCode;
 import mb.fw.policeminwon.entity.PaymentResultNotificationEntity;
 import mb.fw.policeminwon.entity.ViewBillingDetailEntity;
+import mb.fw.policeminwon.exception.CustomServletException;
 import mb.fw.policeminwon.parser.PaymentResultNotificationParser;
 import mb.fw.policeminwon.parser.ViewBillingDetailParser;
 import mb.fw.policeminwon.spec.InterfaceSpec;
 import mb.fw.policeminwon.spec.InterfaceSpecList;
 import mb.fw.policeminwon.web.dto.ESBApiMessage;
-import mb.fw.policeminwon.web.exception.CustomServletException;
 import mb.fw.policeminwon.web.mapper.PaymentResultNotificationMapper;
 import mb.fw.policeminwon.web.mapper.ViewBillingDetailMapper;
 
@@ -46,8 +46,8 @@ public class SummaryService {
 		this.interfaceSpecList = interfaceSpecList;
 	}
 
-	private final String sndCode = SystemCodeConstatns.SUMMRAY;
-	private final String rcvCode = SystemCodeConstatns.KFTC;
+	private final String sndCode = SystemCodeConstants.SUMMRAY;
+	private final String rcvCode = SystemCodeConstants.KFTC;
 
 	public void doAsyncViewBillingDetail(ESBApiMessage apiMessage) {
 		setResponseApiMessage(apiMessage, TcpHeaderTransactionCode.VIEW_BILLING_DETAIL);
@@ -57,6 +57,7 @@ public class SummaryService {
 					.ofNullable(viewBillingDetailMapper.selectBillingDetailByElecPayNo(elecPayNo))
 					.orElseThrow(() -> new CustomServletException("elecPayNo '" + elecPayNo + "' 해당하는 정보가 없음", apiMessage,
 							TcpStatusCode.NO_BILLING_RECORDS));
+			log.info("Mapper[viewBillingDetailMapper] run completed.  -> parameter : {}", elecPayNo);
 			runAsync(apiMessage, ViewBillingDetailParser.toMessage(entity),
 					ESBAPIContextPathConstants.VIEW_VIEW_BILLING_DETAIL);
 		} catch (CustomServletException ce) {
@@ -71,6 +72,7 @@ public class SummaryService {
 		try {
 			PaymentResultNotificationEntity entity = PaymentResultNotificationParser.toEntity(apiMessage.getBodyMessage());
 			paymentResultNotificationMapper.insertPaymentResultNotification(entity);
+			log.info("Mapper[paymentResultNotificationMapper] run completed.  -> main parameter : {}", entity.getElecPayNo());
 			runAsync(apiMessage, PaymentResultNotificationParser.toMessage(entity),
 					ESBAPIContextPathConstants.PAYMENT_RESULT_NOTIFICATION);
 		} catch (CustomServletException ce) {
