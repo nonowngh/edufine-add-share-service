@@ -97,7 +97,7 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 				int start = Math.max(0, bytes.length - 12);
 				byte[] tailBytes = Arrays.copyOfRange(bytes, start, bytes.length);
 				ByteBuf txIdBuf = Unpooled.wrappedBuffer(tailBytes);
-				inBuf.setBytes(39, txIdBuf, 12);
+				inBuf.setBytes(51, txIdBuf, 12);
 			}
 
 			Map<TcpHeaderTransactionCode, Mono<Void>> actions = new HashMap<>();
