@@ -3,6 +3,8 @@ package mb.fw.policeminwon.netty.proxy;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -27,7 +29,10 @@ public class ProxyServer {
 	private EventLoopGroup workerGroup;
 
 	private WebClient webClient;
-	private JmsTemplate jmsTemplate;
+	
+	@Autowired(required = false)
+	@Qualifier("esbJmsTemplate")
+	JmsTemplate esbJmsTemplate;
 
 	private int bindPort;
 	private final List<AsyncConnectionClient> clients;
@@ -35,13 +40,12 @@ public class ProxyServer {
 	private String directTestCallReturn;
 
 	public ProxyServer(int bindPort, List<AsyncConnectionClient> clients, Optional<WebClient> optionalWebClient,
-			InterfaceSpecList interfaceSpecList, Optional<JmsTemplate> optionalJmsTemplate,
+			InterfaceSpecList interfaceSpecList, 
 			String directTestCallReturn) {
 		this.bindPort = bindPort;
 		this.clients = clients;
 		this.webClient = optionalWebClient.orElse(null);
 		this.interfaceSpecList = interfaceSpecList;
-		this.jmsTemplate = optionalJmsTemplate.orElse(null);
 		this.directTestCallReturn = directTestCallReturn;
 	}
 
@@ -60,7 +64,7 @@ public class ProxyServer {
 								ch.pipeline().addLast(
 										TcpCommonSettingConstants.PRETTY_LOGGING ? new PrettyLoggingHandler(LogLevel.INFO)
 												: new LoggingHandler(LogLevel.INFO),
-										new ProxyServerHandler(clients, webClient, interfaceSpecList, jmsTemplate,
+										new ProxyServerHandler(clients, webClient, interfaceSpecList, esbJmsTemplate,
 												directTestCallReturn));
 							}
 						});

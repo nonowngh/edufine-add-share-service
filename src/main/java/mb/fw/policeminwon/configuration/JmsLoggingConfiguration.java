@@ -17,7 +17,7 @@ public class JmsLoggingConfiguration {
 	@Autowired(required = false)
 	private PooledConnectionFactory pooledConnectionFactory;
 
-	@Bean
+	@Bean(name = "esbJmsTemplate")
 	JmsTemplate jmsTemplate() {
 	    return Optional.ofNullable(pooledConnectionFactory)
                 .map(JmsTemplate::new)

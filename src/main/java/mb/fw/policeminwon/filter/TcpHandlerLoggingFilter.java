@@ -4,7 +4,6 @@ import org.springframework.jms.core.JmsTemplate;
 
 import lombok.extern.slf4j.Slf4j;
 import mb.fw.atb.util.ATBUtil;
-import mb.fw.policeminwon.constants.TcpStatusCode;
 import mb.fw.policeminwon.spec.InterfaceSpec;
 import mb.fw.policeminwon.utils.CommonLoggingUtils;
 import reactor.core.publisher.Mono;

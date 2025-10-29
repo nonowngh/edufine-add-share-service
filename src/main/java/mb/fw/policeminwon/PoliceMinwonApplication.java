@@ -4,6 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.ImportResource;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import com.mb.indigo2.springsupport.AdaptorConfig;
 
@@ -15,6 +16,7 @@ import mb.fw.atb.util.MDCLogging;
 @Slf4j
 @ImportResource({"classpath:bean.xml"})
 @ComponentScan(basePackages = {"mb.fw.policeminwon", "mb.fw.adaptor"})
+@EnableScheduling
 @SpringBootApplication
 	public class PoliceMinwonApplication {
 

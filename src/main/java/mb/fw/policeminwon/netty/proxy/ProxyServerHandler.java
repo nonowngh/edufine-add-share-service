@@ -91,6 +91,15 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			String esbTxId = TransactionIdGenerator.generate(interfaceSpec.getInterfaceId(),
 					TransactionSequenceGenerator.getNextSequence(), nowDateTime);
 
+			// 비동기로 인한 요청/응답 전문 짝을 맞추기 위해 '센터전문관리' 항목에 트랜젝션 아이디 뒤에서 12자리 짤라서 넘김
+			if (!rcvCode.equals(SystemCodeConstants.KFTC)) {
+				byte[] bytes = esbTxId.getBytes(TcpCommonSettingConstants.MESSAGE_CHARSET);
+				int start = Math.max(0, bytes.length - 12);
+				byte[] tailBytes = Arrays.copyOfRange(bytes, start, bytes.length);
+				ByteBuf txIdBuf = Unpooled.wrappedBuffer(tailBytes);
+				inBuf.setBytes(39, txIdBuf, 12);
+			}
+
 			Map<TcpHeaderTransactionCode, Mono<Void>> actions = new HashMap<>();
 			// 테스트 콜
 			actions.put(TcpHeaderTransactionCode.TEST_CALL, testCall(inBuf, interfaceSpec));
@@ -102,6 +111,7 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			// 납부 (재)취소
 			actions.put(TcpHeaderTransactionCode.CANCEL_PAYMENT, cancelProcess(inBuf, interfaceSpec, esbTxId));
 
+			
 			Mono<Void> action = actions.getOrDefault(tcpHeaderTransactionCode, Mono.error(
 					new IllegalArgumentException("Invalid transaction-code -> " + tcpHeaderTransactionCode.getCode())));
 			Mono<Void> filteredAction = TcpHandlerLoggingFilter.routeLoggingFilter(action, interfaceSpec, jmsTemplate,
@@ -159,7 +169,8 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 		return webClient.post().uri(contextPath)
 				.bodyValue(ESBApiMessage.builder().interfaceId(interfaceId).transactionId(esbTxId).headerMessage(header)
 						.bodyMessage(body).build())
-				.retrieve().bodyToMono(String.class).doOnNext(response -> log.info("ESB API response : {}", response)).then();
+				.retrieve().bodyToMono(String.class).doOnNext(response -> log.info("ESB API response : {}", response))
+				.then();
 	}
 
 	private Mono<Void> getTcpClientAndSendMessage(String targetSystemCode, ByteBuf inBuf) {
