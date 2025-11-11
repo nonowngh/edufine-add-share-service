@@ -46,7 +46,7 @@ public class FixedLengthMessageBuilder {
 		fields.add(toFixedLength("1", 1));
 		fields.add(toFixedLength("김철수", 8));
 		fields.add(toFixedLength("Y", 1));
-		fields.add(toFixedLength("RESVFLD6DATA1234", 18));
+		fields.add(toFixedLength("RESVFLD6DATA123456", 18));
 
 		// 최종 전문 조립
 		int totalLength = fields.stream().mapToInt(b -> b.length).sum();

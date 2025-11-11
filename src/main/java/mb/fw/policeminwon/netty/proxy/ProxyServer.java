@@ -15,6 +15,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +30,7 @@ public class ProxyServer {
 	private EventLoopGroup workerGroup;
 
 	private WebClient webClient;
-	
+
 	@Autowired(required = false)
 	@Qualifier("esbJmsTemplate")
 	JmsTemplate esbJmsTemplate;
@@ -40,8 +41,7 @@ public class ProxyServer {
 	private String directTestCallReturn;
 
 	public ProxyServer(int bindPort, List<AsyncConnectionClient> clients, Optional<WebClient> optionalWebClient,
-			InterfaceSpecList interfaceSpecList, 
-			String directTestCallReturn) {
+			InterfaceSpecList interfaceSpecList, String directTestCallReturn) {
 		this.bindPort = bindPort;
 		this.clients = clients;
 		this.webClient = optionalWebClient.orElse(null);
@@ -60,12 +60,20 @@ public class ProxyServer {
 						.childHandler(new ChannelInitializer<SocketChannel>() {
 							@Override
 							protected void initChannel(SocketChannel ch) {
-//                    	 ch.pipeline().addLast(new mb.fw.net.common.codec.LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4, true));
 								ch.pipeline().addLast(
-										TcpCommonSettingConstants.PRETTY_LOGGING ? new PrettyLoggingHandler(LogLevel.INFO)
+										new mb.fw.net.common.codec.LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4, true),
+										TcpCommonSettingConstants.PRETTY_LOGGING
+												? new PrettyLoggingHandler(LogLevel.INFO)
 												: new LoggingHandler(LogLevel.INFO),
 										new ProxyServerHandler(clients, webClient, interfaceSpecList, esbJmsTemplate,
 												directTestCallReturn));
+//								ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4), new ProxyServerHandler(clients, webClient, interfaceSpecList, esbJmsTemplate,
+//										directTestCallReturn));
+//								ch.pipeline().addLast(
+//										TcpCommonSettingConstants.PRETTY_LOGGING ? new PrettyLoggingHandler(LogLevel.INFO)
+//												: new LoggingHandler(LogLevel.INFO),
+//										new ProxyServerHandler(clients, webClient, interfaceSpecList, esbJmsTemplate,
+//												directTestCallReturn));
 							}
 						});
 

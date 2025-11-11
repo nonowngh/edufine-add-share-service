@@ -5,28 +5,45 @@ import mb.fw.policeminwon.utils.ByteBufUtils;
 
 public class MessageSlice {
 
-	final static int HEADER_LENGTH = 74;
+//	final static int HEADER_LENGTH = 74;
+	final static int HEADER_LENGTH = 70;
 
+//	public static String getTransactionCode(ByteBuf buf) {
+//		return ByteBufUtils.getStringfromBytebuf(buf, 14, 6);
+//	}
 	public static String getTransactionCode(ByteBuf buf) {
-		return ByteBufUtils.getStringfromBytebuf(buf, 14, 6);
+		return ByteBufUtils.getStringfromBytebuf(buf, 10, 6);
 	}
 
 	public static String getSrFlag(ByteBuf buf) {
-		return ByteBufUtils.getStringfromBytebuf(buf, 23, 1);
+		return ByteBufUtils.getStringfromBytebuf(buf, 19, 1);
 	}
+//	public static String getSrFlag(ByteBuf buf) {
+//		return ByteBufUtils.getStringfromBytebuf(buf, 23, 1);
+//	}
 
+//	public static String getHeaderMessage(ByteBuf buf) {
+//		int totalBufSize = buf.readableBytes();
+//		if (totalBufSize < HEADER_LENGTH)
+//			return ByteBufUtils.getStringfromBytebuf(buf, 4, totalBufSize);
+//		else
+//			return ByteBufUtils.getStringfromBytebuf(buf, 4, 70);
+//	}
 	public static String getHeaderMessage(ByteBuf buf) {
 		int totalBufSize = buf.readableBytes();
 		if (totalBufSize < HEADER_LENGTH)
-			return ByteBufUtils.getStringfromBytebuf(buf, 4, totalBufSize);
+			return ByteBufUtils.getStringfromBytebuf(buf, 0, totalBufSize);
 		else
-			return ByteBufUtils.getStringfromBytebuf(buf, 4, 70);
+			return ByteBufUtils.getStringfromBytebuf(buf, 0, 70);
 	}
 
 	// 응답코드
 	public static String getResponseCode(ByteBuf buf) {
-		return ByteBufUtils.getStringfromBytebuf(buf, 24, 3);
+		return ByteBufUtils.getStringfromBytebuf(buf, 20, 3);
 	}
+//	public static String getResponseCode(ByteBuf buf) {
+//		return ByteBufUtils.getStringfromBytebuf(buf, 24, 3);
+//	}
 
 	// 전자납부번호(body index 0 ~ 19)
 	public static String getElecPayNo(ByteBuf buf) {
