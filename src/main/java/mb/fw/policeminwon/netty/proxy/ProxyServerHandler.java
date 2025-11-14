@@ -87,18 +87,19 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			String responseCode = MessageSlice.getResponseCode(inBuf);
 			InterfaceSpec interfaceSpec = interfaceSpecList.findInterfaceInfo(sndCode, rcvCode,
 					tcpHeaderTransactionCode.getCode());
-			String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+			String reqMsgDateTime = MessageSlice.getSendTime(inBuf);
+			String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmmss"));
 			String esbTxId = TransactionIdGenerator.generate(interfaceSpec.getInterfaceId(),
-					TransactionSequenceGenerator.getNextSequence(), nowDateTime);
+					TransactionSequenceGenerator.getNextSequence(), reqMsgDateTime, nowDateTime);
 
 			// 비동기로 인한 요청/응답 전문 짝을 맞추기 위해 '센터전문관리' 항목에 트랜젝션 아이디 뒤에서 12자리 짤라서 넘김
-			if (!rcvCode.equals(SystemCodeConstants.KFTC)) {
-				byte[] bytes = esbTxId.getBytes(TcpCommonSettingConstants.MESSAGE_CHARSET);
-				int start = Math.max(0, bytes.length - 12);
-				byte[] tailBytes = Arrays.copyOfRange(bytes, start, bytes.length);
-				ByteBuf txIdBuf = Unpooled.wrappedBuffer(tailBytes);
-				inBuf.setBytes(51, txIdBuf, 12);
-			}
+//			if (!rcvCode.equals(SystemCodeConstants.KFTC)) {
+//				byte[] bytes = esbTxId.getBytes(TcpCommonSettingConstants.MESSAGE_CHARSET);
+//				int start = Math.max(0, bytes.length - 12);
+//				byte[] tailBytes = Arrays.copyOfRange(bytes, start, bytes.length);
+//				ByteBuf txIdBuf = Unpooled.wrappedBuffer(tailBytes);
+//				inBuf.setBytes(47, txIdBuf, 12);
+//			}
 
 			Map<TcpHeaderTransactionCode, Mono<Void>> actions = new HashMap<>();
 			// 테스트 콜
@@ -178,7 +179,7 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			AsyncConnectionClient asyncClient = clients.stream()
 					.filter(client -> client.getSystemCode().equals(targetSystemCode)).findFirst()
 					.orElseThrow(() -> new IllegalStateException("Tcp 클라이언트를 찾을 수 없습니다. 시스템 코드: " + targetSystemCode));
-			asyncClient.callAsync(inBuf);
+			asyncClient.callAsync(ByteBufUtils.addMessageLength(inBuf));
 			return null; // Mono<Void>
 		});
 

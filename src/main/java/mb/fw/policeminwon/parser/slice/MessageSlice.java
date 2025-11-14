@@ -14,6 +14,10 @@ public class MessageSlice {
 	public static String getTransactionCode(ByteBuf buf) {
 		return ByteBufUtils.getStringfromBytebuf(buf, 10, 6);
 	}
+	
+	public static String getSendTime(ByteBuf buf) {
+		return ByteBufUtils.getStringfromBytebuf(buf, 23, 12);
+	}
 
 	public static String getSrFlag(ByteBuf buf) {
 		return ByteBufUtils.getStringfromBytebuf(buf, 19, 1);
