@@ -32,9 +32,6 @@ spring:
     exclude:
       - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
 
-jms:
-  logging:
-    enabled: false
 #server:
 #  port: 28100
 #

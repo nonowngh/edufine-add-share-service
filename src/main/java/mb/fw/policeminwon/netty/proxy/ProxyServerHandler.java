@@ -88,7 +88,7 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			InterfaceSpec interfaceSpec = interfaceSpecList.findInterfaceInfo(sndCode, rcvCode,
 					tcpHeaderTransactionCode.getCode());
 			String reqMsgDateTime = MessageSlice.getSendTime(inBuf);
-			String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmmss"));
+			String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
 			String esbTxId = TransactionIdGenerator.generate(interfaceSpec.getInterfaceId(),
 					TransactionSequenceGenerator.getNextSequence(), reqMsgDateTime, nowDateTime);
 
@@ -116,7 +116,7 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			Mono<Void> action = actions.getOrDefault(tcpHeaderTransactionCode, Mono.error(
 					new IllegalArgumentException("Invalid transaction-code -> " + tcpHeaderTransactionCode.getCode())));
 			Mono<Void> filteredAction = TcpHandlerLoggingFilter.routeLoggingFilter(action, interfaceSpec, jmsTemplate,
-					esbTxId, nowDateTime, responseCode);
+					esbTxId, nowDateTime, responseCode, inBuf);
 			filteredAction.subscribe();
 		} finally {
 			if (((ReferenceCounted) msg).refCnt() > 0)

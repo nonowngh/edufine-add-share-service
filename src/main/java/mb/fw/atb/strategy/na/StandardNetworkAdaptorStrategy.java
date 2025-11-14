@@ -1,17 +1,40 @@
 package mb.fw.atb.strategy.na;
 
+import java.util.Base64;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationContext;
+import org.springframework.core.env.Environment;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.jms.core.JmsTemplate;
+import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
+import org.springframework.web.reactive.function.client.WebClient;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import com.mb.indigo2.springsupport.AdaptorConfigBean;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import lombok.extern.slf4j.Slf4j;
 import mb.fw.atb.aop.TimeTrace;
+import mb.fw.atb.config.IFConfig;
 import mb.fw.atb.config.Specifications;
 import mb.fw.atb.config.sub.EmbeddedNetworkAdaptor;
-import mb.fw.atb.enums.THeader;
-import mb.fw.atb.config.IFConfig;
 import mb.fw.atb.config.sub.IFContext;
+import mb.fw.atb.enums.THeader;
 import mb.fw.atb.enums.TResult;
 import mb.fw.atb.model.OnSignalInfo;
 import mb.fw.atb.parser.ATBParser;
@@ -38,23 +61,7 @@ import mb.fw.transformation.engine.MapEngine;
 import mb.fw.transformation.form.MessageForm;
 import mb.fw.transformation.form.MessageFormBox;
 import mb.fw.transformation.tool.TypeConversion;
-import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.context.ApplicationContext;
-import org.springframework.core.env.Environment;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
-import org.springframework.jms.core.JmsTemplate;
-import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.ExchangeStrategies;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import java.util.*;
 
 @Component(value = "StandardNetworkAdaptorStrategy")
 @Slf4j
@@ -108,7 +115,7 @@ public class StandardNetworkAdaptorStrategy extends ATBStrategy {
 
     @PostConstruct
     @TimeTrace
-    public void init() {
+    public void init() throws Exception {
 
         log.info("StandardNetworkAdaptorStrategy ==>" + this.toString());
         int[] bindPorts = new int[1];

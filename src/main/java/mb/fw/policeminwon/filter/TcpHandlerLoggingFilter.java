@@ -2,8 +2,10 @@ package mb.fw.policeminwon.filter;
 
 import org.springframework.jms.core.JmsTemplate;
 
+import io.netty.buffer.ByteBuf;
 import lombok.extern.slf4j.Slf4j;
 import mb.fw.atb.util.ATBUtil;
+import mb.fw.policeminwon.constants.TcpCommonSettingConstants;
 import mb.fw.policeminwon.spec.InterfaceSpec;
 import mb.fw.policeminwon.utils.CommonLoggingUtils;
 import reactor.core.publisher.Mono;
@@ -11,8 +13,8 @@ import reactor.core.publisher.Mono;
 @Slf4j
 public class TcpHandlerLoggingFilter {
 
-	public static Mono<Void> routeLoggingFilter(Mono<Void> action, InterfaceSpec interfaceSpec,
-			JmsTemplate jmsTemplate, String esbTxId, String nowDateTime, String responseCode) {
+	public static Mono<Void> routeLoggingFilter(Mono<Void> action, InterfaceSpec interfaceSpec, JmsTemplate jmsTemplate,
+			String esbTxId, String nowDateTime, String responseCode, ByteBuf messageBuf) {
 
 		if (jmsTemplate != null && interfaceSpec.isLogging()) {
 			try {
@@ -27,12 +29,12 @@ public class TcpHandlerLoggingFilter {
 		String to = interfaceSpec.getRcvCode();
 		String description = interfaceSpec.getDescription();
 		CommonLoggingUtils.logTransaction(description, from, to, esbTxId);
+		String message = messageBuf.toString(TcpCommonSettingConstants.MESSAGE_CHARSET);
 
 		return action.doOnSubscribe(res -> log.info("===[{}] 처리 시작===", esbTxId)).doOnSuccess(res -> {
 			try {
 				if (jmsTemplate != null && interfaceSpec.isLogging()) {
-					ATBUtil.endLogging(jmsTemplate, interfaceSpec.getInterfaceId(), esbTxId, "", 0, "S", "SUCCESS",
-							null);
+					ATBUtil.endLogging(jmsTemplate, interfaceSpec.getInterfaceId(), esbTxId, "", 0, "S", message, null);
 				}
 			} catch (Exception e) {
 				log.error("JMS end logging error!!!", e);

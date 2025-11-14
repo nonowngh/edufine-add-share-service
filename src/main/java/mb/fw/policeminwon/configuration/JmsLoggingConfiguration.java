@@ -1,7 +1,5 @@
 package mb.fw.policeminwon.configuration;
 
-import java.util.Optional;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -14,13 +12,10 @@ import com.indigo.indigomq.pool.PooledConnectionFactory;
 @ConditionalOnProperty(name = "jms.logging.enabled", havingValue = "true")
 public class JmsLoggingConfiguration {
 
-	@Autowired(required = false)
-	private PooledConnectionFactory pooledConnectionFactory;
-
-	@Bean(name = "esbJmsTemplate")
-	JmsTemplate jmsTemplate() {
-	    return Optional.ofNullable(pooledConnectionFactory)
-                .map(JmsTemplate::new)
-                .orElse(null);
+	@Bean
+	JmsTemplate jmsTemplate(@Autowired(required = false) PooledConnectionFactory jmsConnectionFactory) {
+		if (jmsConnectionFactory != null)
+			return new JmsTemplate(jmsConnectionFactory);
+		return null;
 	}
 }
