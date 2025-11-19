@@ -46,7 +46,6 @@ public class CommonHeaderParser {
 	public static ByteBuf responseHeader(ByteBuf headerBuf, String messageTypeCode, String statusCode,
 			String policeTransactionId) {
 		ByteBuf resBuf = Unpooled.buffer(HEADER_LENGTH - 4);
-
 		try {
 			resBuf.writeBytes(ByteBufUtils.getStringfromBytebuf(headerBuf, 0, 3).getBytes()); // 업무구분(3)
 			resBuf.writeBytes(ByteBufUtils.getStringfromBytebuf(headerBuf, 3, 3).getBytes()); // 기관코드(3)
@@ -63,7 +62,7 @@ public class CommonHeaderParser {
 			resBuf.writeBytes(ByteBufUtils.getStringfromBytebuf(headerBuf, 61, 7).getBytes()); // 이용기관지로번호(7)
 			ByteBufUtils.writeRightPaddingString(resBuf, "", 2); // 필러(2)
 		} catch (Exception e) {
-			log.warn("make response bytebuf error -> [{}]", e.getMessage());
+			log.warn("make response bytebuf error -> [{}]", e.getMessage(), e);
 			ByteBufUtils.writeRightPaddingString(resBuf, "", (HEADER_LENGTH - 4 - resBuf.readableBytes()));
 		}
 		return resBuf;

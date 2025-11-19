@@ -61,6 +61,7 @@ public class ByteBufUtils {
 	public static ByteBuf addMessageLength(ByteBuf messageBuf) {
 		ByteBuf lengthBuf = Unpooled.buffer(4);
 		writeLeftPaddingNumber(lengthBuf, messageBuf.readableBytes(), 4);
+	    messageBuf.retain();
 		return Unpooled.wrappedBuffer(lengthBuf, messageBuf);
 	}
 }

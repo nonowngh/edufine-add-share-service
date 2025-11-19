@@ -1,8 +1,11 @@
 package mb.fw.policeminwon.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import lombok.Data;
 
 @Data
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ViewBillingDetailBody {
 	// 전자납부번호
 	private String eltrPymNo;
