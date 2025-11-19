@@ -17,5 +17,7 @@ public class InterfaceSpec {
 	private String description;
 	// ESB LOGGING 여부
 	private boolean logging = true;
+	// 목적지 API PATH(즉심 호출 용)
+	private String apiPath;
 
 }

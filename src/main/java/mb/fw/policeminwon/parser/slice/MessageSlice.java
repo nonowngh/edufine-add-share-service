@@ -22,6 +22,10 @@ public class MessageSlice {
 	public static String getSrFlag(ByteBuf buf) {
 		return ByteBufUtils.getStringfromBytebuf(buf, 19, 1);
 	}
+
+	public static String getCenterTxId(ByteBuf buf) {
+		return ByteBufUtils.getStringfromBytebuf(buf, 35, 12);
+	}
 //	public static String getSrFlag(ByteBuf buf) {
 //		return ByteBufUtils.getStringfromBytebuf(buf, 23, 1);
 //	}

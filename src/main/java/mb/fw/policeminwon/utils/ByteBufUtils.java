@@ -28,6 +28,11 @@ public class ByteBufUtils {
 	    return end;
 	}
 	
+	public static int skipAndMoveOffset(ByteBuf buf, int start, int length) {
+	    // offset 구간 내용만 읽고 사용하지 않음
+	    return start + length;
+	}
+	
 	public static int setIntegerAndMoveOffset(Consumer<Integer> setter, ByteBuf buf, int start, int length) {
 	    int end = start + length;
 	    setter.accept(ByteBufUtils.getIntegerValuefromByteBuf(buf, start, length));

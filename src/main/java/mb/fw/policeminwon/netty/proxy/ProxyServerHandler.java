@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -21,7 +22,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import lombok.extern.slf4j.Slf4j;
 import mb.fw.atb.util.TransactionIdGenerator;
-import mb.fw.policeminwon.constants.ESBAPIContextPathConstants;
 import mb.fw.policeminwon.constants.SystemCodeConstants;
 import mb.fw.policeminwon.constants.TcpCommonSettingConstants;
 import mb.fw.policeminwon.constants.TcpHeaderTransactionCode;
@@ -30,14 +30,20 @@ import mb.fw.policeminwon.constants.TcpStatusCode;
 import mb.fw.policeminwon.exception.CustomHandlerException;
 import mb.fw.policeminwon.filter.TcpHandlerLoggingFilter;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
+import mb.fw.policeminwon.parser.CancelPaymentParser;
 import mb.fw.policeminwon.parser.CommonHeaderParser;
+import mb.fw.policeminwon.parser.PaymentResultNotificationParser;
+import mb.fw.policeminwon.parser.ViewBillingDetailParser;
 import mb.fw.policeminwon.parser.slice.MessageSlice;
 import mb.fw.policeminwon.spec.InterfaceSpec;
 import mb.fw.policeminwon.spec.InterfaceSpecList;
 import mb.fw.policeminwon.utils.ByteBufUtils;
 import mb.fw.policeminwon.utils.CommonLoggingUtils;
 import mb.fw.policeminwon.utils.TransactionSequenceGenerator;
-import mb.fw.policeminwon.web.dto.ESBApiMessage;
+import mb.fw.policeminwon.web.dto.CancelPaymentBody;
+import mb.fw.policeminwon.web.dto.PaymentResultNotificationBody;
+import mb.fw.policeminwon.web.dto.SummaryCommonMessage;
+import mb.fw.policeminwon.web.dto.ViewBillingDetailBody;
 import reactor.core.publisher.Mono;
 
 @Slf4j
@@ -91,6 +97,7 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
 			String esbTxId = TransactionIdGenerator.generate(interfaceSpec.getInterfaceId(),
 					TransactionSequenceGenerator.getNextSequence(), reqMsgDateTime, nowDateTime);
+			String centerTxId = MessageSlice.getCenterTxId(inBuf);
 
 			// 비동기로 인한 요청/응답 전문 짝을 맞추기 위해 '센터전문관리' 항목에 트랜젝션 아이디 뒤에서 12자리 짤라서 넘김
 //			if (!rcvCode.equals(SystemCodeConstants.KFTC)) {
@@ -105,14 +112,14 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			// 테스트 콜
 			actions.put(TcpHeaderTransactionCode.TEST_CALL, testCall(inBuf, interfaceSpec));
 			// 고지내역 상세조회
-			actions.put(TcpHeaderTransactionCode.VIEW_BILLING_DETAIL, penaltyProcess(inBuf, interfaceSpec, esbTxId));
+			actions.put(TcpHeaderTransactionCode.VIEW_BILLING_DETAIL,
+					penaltyProcess(inBuf, interfaceSpec, esbTxId, centerTxId));
 			// 납부결과 통지
 			actions.put(TcpHeaderTransactionCode.PAYMENT_RESULT_NOTIFICATION,
-					penaltyProcess(inBuf, interfaceSpec, esbTxId));
+					penaltyProcess(inBuf, interfaceSpec, esbTxId, centerTxId));
 			// 납부 (재)취소
 			actions.put(TcpHeaderTransactionCode.CANCEL_PAYMENT, cancelProcess(inBuf, interfaceSpec, esbTxId));
 
-			
 			Mono<Void> action = actions.getOrDefault(tcpHeaderTransactionCode, Mono.error(
 					new IllegalArgumentException("Invalid transaction-code -> " + tcpHeaderTransactionCode.getCode())));
 			Mono<Void> filteredAction = TcpHandlerLoggingFilter.routeLoggingFilter(action, interfaceSpec, jmsTemplate,
@@ -126,27 +133,44 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 
 	private Mono<Void> cancelProcess(ByteBuf inBuf, InterfaceSpec interfaceSpec, String esbTxId) {
 		return Mono.fromRunnable(() -> getTcpClientAndSendMessage(interfaceSpec.getRcvCode(), inBuf))
-				.then(SystemCodeConstants.KFTC.equals(interfaceSpec.getSndCode())
-						? esbApiCall(MessageSlice.getHeaderMessage(inBuf),
-								MessageSlice.getCancelPaymentTotalBody((inBuf)),
-								ESBAPIContextPathConstants.CANCEL_PAYMENT, interfaceSpec.getInterfaceId(), esbTxId)
-						: Mono.empty());
+				.then(Mono.defer(() -> {
+					if (!SystemCodeConstants.KFTC.equals(interfaceSpec.getSndCode())) {
+						return Mono.empty();
+					}
+					String useOrgTxId = esbTxId.substring(esbTxId.length() - 12);
+					CancelPaymentBody body = CancelPaymentParser
+							.toEntity(MessageSlice.getCancelPaymentTotalBody(inBuf));
+					body.setOrgaTranNo(useOrgTxId);
+					return apiCall(body, interfaceSpec.getApiPath());
+				}));
 	}
 
-	private Mono<Void> penaltyProcess(ByteBuf inBuf, InterfaceSpec interfaceSpec, String esbTxId) {
+	private Mono<Void> penaltyProcess(ByteBuf inBuf, InterfaceSpec interfaceSpec, String esbTxId, String centerTxId) {
 		String rcvCode = interfaceSpec.getRcvCode();
 		if (SystemCodeConstants.SUMMRAY.equals(rcvCode)) {
 			// 고지내역 상세조회
-			if (TcpHeaderTransactionCode.VIEW_BILLING_DETAIL.getCode().equals(interfaceSpec.getMessageCode()))
-				return esbApiCall(MessageSlice.getHeaderMessage(inBuf),
-						MessageSlice.getVeiwBillingDetailTotalBody((inBuf)),
-						ESBAPIContextPathConstants.VIEW_VIEW_BILLING_DETAIL, interfaceSpec.getInterfaceId(), esbTxId);
+			String useOrgTxId = esbTxId.substring(esbTxId.length() - 12);
+			if (TcpHeaderTransactionCode.VIEW_BILLING_DETAIL.getCode().equals(interfaceSpec.getMessageCode())) {
+				ViewBillingDetailBody body = ViewBillingDetailParser
+						.toEntity(MessageSlice.getVeiwBillingDetailTotalBody(inBuf));
+				body.setCentTranNo(centerTxId);
+				body.setOrgaTranNo(useOrgTxId);
+				Mono<SummaryCommonMessage<ViewBillingDetailBody>> resultMono = apiCall(body,
+						interfaceSpec.getApiPath());
+				resultMono.subscribe(res -> {
+					ViewBillingDetailBody response = res.getOutputData();
+					String messageBody = ViewBillingDetailParser.toMessage(response);
+					//tcp server를 호출하던지.. 여기서 txid, interfaceid 뽑아내고 응답 주던지 처리 필요
+				});
+			}
 			// 납부결과 통지
-			else
-				return esbApiCall(MessageSlice.getHeaderMessage(inBuf),
-						MessageSlice.getPaymentResultNotificationTotalBody((inBuf)),
-						ESBAPIContextPathConstants.PAYMENT_RESULT_NOTIFICATION, interfaceSpec.getInterfaceId(),
-						esbTxId);
+			else {
+				PaymentResultNotificationBody body = PaymentResultNotificationParser
+						.toEntity(MessageSlice.getPaymentResultNotificationTotalBody(inBuf));
+				body.setCentTranNo(centerTxId);
+				body.setOrgaTranNo(useOrgTxId);
+				return apiCall(body, interfaceSpec.getApiPath());
+			}
 		} else {
 			return getTcpClientAndSendMessage(rcvCode, inBuf);
 		}
@@ -161,17 +185,14 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 		}
 	}
 
-	public Mono<Void> esbApiCall(String header, String body, String contextPath, String interfaceId, String esbTxId) {
+	public <T> Mono<SummaryCommonMessage<T>> apiCall(T request, String contextPath) {
 		if (webClient == null) {
 			log.error("WebClient is NULL. check yaml file.");
 			return Mono.error(new IllegalStateException("WebClient is NULL"));
 		}
-
-		return webClient.post().uri(contextPath)
-				.bodyValue(ESBApiMessage.builder().interfaceId(interfaceId).transactionId(esbTxId).headerMessage(header)
-						.bodyMessage(body).build())
-				.retrieve().bodyToMono(String.class).doOnNext(response -> log.info("ESB API response : {}", response))
-				.then();
+		return webClient.post().uri(contextPath).bodyValue(request).retrieve()
+				.bodyToMono(new ParameterizedTypeReference<SummaryCommonMessage<T>>() {
+				}).doOnNext(response -> log.info("API response : {}", response));
 	}
 
 	private Mono<Void> getTcpClientAndSendMessage(String targetSystemCode, ByteBuf inBuf) {
