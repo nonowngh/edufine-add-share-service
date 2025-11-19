@@ -1,4 +1,4 @@
-package mb.fw.policeminwon.web.dto;
+package mb.fw.policeminwon.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -4,8 +4,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import lombok.extern.slf4j.Slf4j;
 import mb.fw.policeminwon.constants.TcpCommonSettingConstants;
+import mb.fw.policeminwon.dto.ViewBillingDetailBody;
 import mb.fw.policeminwon.utils.ByteBufUtils;
-import mb.fw.policeminwon.web.dto.ViewBillingDetailBody;
 
 /**
  * 경찰청 범칙금 - 과태료 고지내역 상세 조회
@@ -15,7 +15,6 @@ public class ViewBillingDetailParser {
 	public static ViewBillingDetailBody toEntity(String data) {
 		ByteBuf buf = Unpooled.copiedBuffer(data, TcpCommonSettingConstants.MESSAGE_CHARSET);
 		ViewBillingDetailBody entity = new ViewBillingDetailBody();
-		System.out.println(buf.readableBytes());
 		int offset = 0;
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setEltrPymNo, buf, offset, 19); // 전자납부번호 (AN, 19)
 		offset = ByteBufUtils.skipAndMoveOffset(buf, offset, 20); // 예비 정보 FIELD 1 (AN, 20)

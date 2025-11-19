@@ -12,7 +12,7 @@ import com.indigo.indigomq.pool.PooledConnectionFactory;
 @ConditionalOnProperty(name = "jms.logging.enabled", havingValue = "true")
 public class JmsLoggingConfiguration {
 
-	@Bean
+	@Bean("esbJmsTemplate")
 	JmsTemplate jmsTemplate(@Autowired(required = false) PooledConnectionFactory jmsConnectionFactory) {
 		if (jmsConnectionFactory != null)
 			return new JmsTemplate(jmsConnectionFactory);

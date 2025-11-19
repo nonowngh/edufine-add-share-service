@@ -4,9 +4,10 @@ server:
 web:
   client:
     enabled: true
-    target-url: http://localhost:28100/esb/api/summary
+    target-url: http://localhost:38000
 
 tcp:
+  encoding: MS949
   server:
     proxy:
       enabled: true
@@ -18,11 +19,19 @@ tcp:
         - system-code: KFT
           host: 127.0.0.1
           port: 5555
-          reconnect-delay-sec: 10
+          reconnect-delay-sec: 36000
         - system-code: TCS
           host: 127.0.0.1
           port: 7777
-          reconnect-delay-sec: 30
+          reconnect-delay-sec: 36000
+        - system-code: ESB
+          host: 127.0.0.1
+          port: 9999
+          reconnect-delay-sec: 3600000
+
+jms:
+  logging:
+    enabled: false
 spring:
   profiles:
     active: proxy

@@ -3,9 +3,8 @@ package mb.fw.policeminwon.parser;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import mb.fw.policeminwon.constants.TcpCommonSettingConstants;
-import mb.fw.policeminwon.entity.PaymentResultNotificationEntity;
+import mb.fw.policeminwon.dto.PaymentResultNotificationBody;
 import mb.fw.policeminwon.utils.ByteBufUtils;
-import mb.fw.policeminwon.web.dto.PaymentResultNotificationBody;
 
 /**
  * 경찰청 범칙금 - 과태료 납부결과 통지
@@ -31,29 +30,29 @@ public class PaymentResultNotificationParser {
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setPaySysCd, buf, offset, 1); // 납부 이용 시스템 (AN, 1)
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setApaySysCd, buf, offset, 1); // 기 납부 이용 시스템 (AN, 1)
 		offset = ByteBufUtils.setStringAndMoveOffset(entity::setPayCd, buf, offset, 1); // 납부 형태 구분 (AN, 1)
-		offset = ByteBufUtils.skipAndMoveOffset(buf, offset, 15); // 예비정보 FIELD 7 (AN, 9)
+		offset = ByteBufUtils.skipAndMoveOffset(buf, offset, 9); // 예비정보 FIELD 7 (AN, 9)
 		return entity;
 	}
 
-	public static String toMessage(PaymentResultNotificationEntity entity) {
+	public static String toMessage(PaymentResultNotificationBody entity) {
 		ByteBuf buf = Unpooled.buffer();		
-		ByteBufUtils.writeRightPaddingString(buf, entity.getObligorRegNo(), 13);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getCollectorAccountNo(), 6);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getElecPayNo(), 19);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getReserveField1(), 3);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getReserveField2(), 7);
-	    ByteBufUtils.writeLeftPaddingNumber(buf, entity.getPayAmount(), 15);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getPayDate(), 8);
-	    ByteBufUtils.writeLeftPaddingNumber(buf, entity.getBankBranchCode(), 7);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getReserveField3(), 16);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getReserveField4(), 14);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getPayerRegNo(), 13);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getReserveField5(), 10);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getReserveField6(), 10);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getPaySystem(), 1);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getPrePaySystem(), 1);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getPayType(), 1);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getReserveField7(), 15);
+		ByteBufUtils.writeRightPaddingString(buf, entity.getPayerRrno(), 13);
+	    ByteBufUtils.writeRightPaddingString(buf, entity.getPcptaxColctrAcno(), 6);
+	    ByteBufUtils.writeRightPaddingString(buf, entity.getEltrPymNo(), 19);
+	    ByteBufUtils.writeRightPaddingString(buf, "", 3);
+	    ByteBufUtils.writeRightPaddingString(buf, "", 7);
+	    ByteBufUtils.writeLeftPaddingNumber(buf, Integer.valueOf(entity.getPayAmt()), 15);
+	    ByteBufUtils.writeRightPaddingString(buf, entity.getPayYmd(), 8);
+	    ByteBufUtils.writeLeftPaddingNumber(buf, Integer.valueOf(entity.getRoffFncInstCd()), 7);
+	    ByteBufUtils.writeRightPaddingString(buf, "", 16);
+	    ByteBufUtils.writeRightPaddingString(buf, "", 14);
+	    ByteBufUtils.writeRightPaddingString(buf, entity.getRealPayerRrno(), 13);
+	    ByteBufUtils.writeRightPaddingString(buf, "", 10);
+	    ByteBufUtils.writeRightPaddingString(buf, "", 10);
+	    ByteBufUtils.writeRightPaddingString(buf, entity.getPaySysCd(), 1);
+	    ByteBufUtils.writeRightPaddingString(buf, entity.getApaySysCd(), 1);
+	    ByteBufUtils.writeRightPaddingString(buf, entity.getPayCd(), 1);
+	    ByteBufUtils.writeRightPaddingString(buf, "", 9);
 	    return buf.toString(TcpCommonSettingConstants.MESSAGE_CHARSET);
 	}
 }

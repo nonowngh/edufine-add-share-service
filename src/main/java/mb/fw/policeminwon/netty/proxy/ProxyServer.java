@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -30,6 +31,7 @@ public class ProxyServer {
 	private WebClient webClient;
 
 	@Autowired(required = false)
+	@Qualifier("esbJmsTemplate")
 	JmsTemplate esbJmsTemplate;
 
 	private int bindPort;

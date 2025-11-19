@@ -3,9 +3,8 @@ package mb.fw.policeminwon.parser;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import mb.fw.policeminwon.constants.TcpCommonSettingConstants;
-import mb.fw.policeminwon.entity.CancelPaymentEntity;
+import mb.fw.policeminwon.dto.CancelPaymentBody;
 import mb.fw.policeminwon.utils.ByteBufUtils;
-import mb.fw.policeminwon.web.dto.CancelPaymentBody;
 
 public class CancelPaymentParser {
 	
@@ -25,17 +24,17 @@ public class CancelPaymentParser {
 		return entity;
 	}
 
-	public static String toMessage(CancelPaymentEntity entity) {
+	public static String toMessage(CancelPaymentBody entity) {
 		ByteBuf buf = Unpooled.buffer();		
-		ByteBufUtils.writeLeftPaddingNumber(buf, entity.getBankBranchCode(), 7);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getPayerRegNo(), 13);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getOriginCenterMsgNo(), 12);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getOriginSendDateTime(), 12);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getReserveField1(), 16);
-	    ByteBufUtils.writeLeftPaddingNumber(buf, entity.getOriginPayAmount(), 15);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getCancelReason(), 1);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getOriginPayType(), 1);
-	    ByteBufUtils.writeRightPaddingString(buf, entity.getReserveField2(), 9);
+		ByteBufUtils.writeLeftPaddingNumber(buf, Integer.valueOf(entity.getRoffFncInstCd()), 7);
+	    ByteBufUtils.writeRightPaddingString(buf, entity.getRealPayerRrno(), 13);
+	    ByteBufUtils.writeRightPaddingString(buf, entity.getCentTranNo(), 12);
+	    ByteBufUtils.writeRightPaddingString(buf, entity.getOrgdlTrsmDt(), 12);
+	    ByteBufUtils.writeRightPaddingString(buf, "", 16);
+	    ByteBufUtils.writeLeftPaddingNumber(buf, Integer.valueOf(entity.getOrgdlPayAmt()), 15);
+	    ByteBufUtils.writeRightPaddingString(buf, entity.getRtrcnRsn(), 1);
+	    ByteBufUtils.writeRightPaddingString(buf, entity.getOrgdlPayCd(), 1);
+	    ByteBufUtils.writeRightPaddingString(buf, "", 9);
 	    return buf.toString(TcpCommonSettingConstants.MESSAGE_CHARSET);
 	}
 }

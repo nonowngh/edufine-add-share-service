@@ -27,6 +27,10 @@ import mb.fw.policeminwon.constants.TcpCommonSettingConstants;
 import mb.fw.policeminwon.constants.TcpHeaderTransactionCode;
 import mb.fw.policeminwon.constants.TcpMessageConstants;
 import mb.fw.policeminwon.constants.TcpStatusCode;
+import mb.fw.policeminwon.dto.CancelPaymentBody;
+import mb.fw.policeminwon.dto.PaymentResultNotificationBody;
+import mb.fw.policeminwon.dto.SummaryCommonMessage;
+import mb.fw.policeminwon.dto.ViewBillingDetailBody;
 import mb.fw.policeminwon.exception.CustomHandlerException;
 import mb.fw.policeminwon.filter.TcpHandlerLoggingFilter;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
@@ -40,10 +44,6 @@ import mb.fw.policeminwon.spec.InterfaceSpecList;
 import mb.fw.policeminwon.utils.ByteBufUtils;
 import mb.fw.policeminwon.utils.CommonLoggingUtils;
 import mb.fw.policeminwon.utils.TransactionSequenceGenerator;
-import mb.fw.policeminwon.web.dto.CancelPaymentBody;
-import mb.fw.policeminwon.web.dto.PaymentResultNotificationBody;
-import mb.fw.policeminwon.web.dto.SummaryCommonMessage;
-import mb.fw.policeminwon.web.dto.ViewBillingDetailBody;
 import reactor.core.publisher.Mono;
 
 @Slf4j
@@ -87,7 +87,10 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			if (panaltyTransactionCode.contains(tcpHeaderTransactionCode)) {
 				String policeSystemCode = MessageSlice.getElecPayNo(inBuf);
 				if (policeSystemCode.startsWith(TcpMessageConstants.getSJSElecNumType())) {
-					rcvCode = SystemCodeConstants.SUMMRAY;
+					if (SystemCodeConstants.KFTC.equals(sndCode))
+						rcvCode = SystemCodeConstants.SUMMRAY;
+					else
+						sndCode = SystemCodeConstants.SUMMRAY;
 				}
 			}
 			String responseCode = MessageSlice.getResponseCode(inBuf);
@@ -98,15 +101,6 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			String esbTxId = TransactionIdGenerator.generate(interfaceSpec.getInterfaceId(),
 					TransactionSequenceGenerator.getNextSequence(), reqMsgDateTime, nowDateTime);
 			String centerTxId = MessageSlice.getCenterTxId(inBuf);
-
-			// 비동기로 인한 요청/응답 전문 짝을 맞추기 위해 '센터전문관리' 항목에 트랜젝션 아이디 뒤에서 12자리 짤라서 넘김
-//			if (!rcvCode.equals(SystemCodeConstants.KFTC)) {
-//				byte[] bytes = esbTxId.getBytes(TcpCommonSettingConstants.MESSAGE_CHARSET);
-//				int start = Math.max(0, bytes.length - 12);
-//				byte[] tailBytes = Arrays.copyOfRange(bytes, start, bytes.length);
-//				ByteBuf txIdBuf = Unpooled.wrappedBuffer(tailBytes);
-//				inBuf.setBytes(47, txIdBuf, 12);
-//			}
 
 			Map<TcpHeaderTransactionCode, Mono<Void>> actions = new HashMap<>();
 			// 테스트 콜
@@ -132,57 +126,67 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 	}
 
 	private Mono<Void> cancelProcess(ByteBuf inBuf, InterfaceSpec interfaceSpec, String esbTxId) {
-		return Mono.fromRunnable(() -> getTcpClientAndSendMessage(interfaceSpec.getRcvCode(), inBuf))
-				.then(Mono.defer(() -> {
-					if (!SystemCodeConstants.KFTC.equals(interfaceSpec.getSndCode())) {
-						return Mono.empty();
-					}
-					String useOrgTxId = esbTxId.substring(esbTxId.length() - 12);
-					CancelPaymentBody body = CancelPaymentParser
-							.toEntity(MessageSlice.getCancelPaymentTotalBody(inBuf));
-					body.setOrgaTranNo(useOrgTxId);
-					return apiCall(body, interfaceSpec.getApiPath());
-				}));
+		return getTcpClientAndSendMessage(interfaceSpec.getRcvCode(), inBuf.retain()).then(Mono.defer(() -> {
+			if (!SystemCodeConstants.KFTC.equals(interfaceSpec.getSndCode()))
+				return Mono.empty();
+			String useOrgTxId = esbTxId.substring(esbTxId.length() - 12);
+			CancelPaymentBody body = CancelPaymentParser.toEntity(MessageSlice.getCancelPaymentTotalBody(inBuf));
+			body.setOrgaTranNo(useOrgTxId);
+			return apiCall(body, interfaceSpec.getApiPath()).flatMap(response -> {
+				String msg = CancelPaymentParser.toMessage(response.getOutputData());
+				ByteBuf outBuf = buildResponseBuf(inBuf, "0430", response.getResCode(), useOrgTxId, msg);
+				return getTcpClientAndSendMessage(SystemCodeConstants.ESB, outBuf);
+			}).onErrorResume(ex -> {
+				log.error("API 호출 중 오류 발생: " + ex.getMessage());
+				ByteBuf outBuf = buildResponseBuf(inBuf, "0430", "093", useOrgTxId, "시스템 오류 : 즉심 API 호출 오류");
+				return getTcpClientAndSendMessage(SystemCodeConstants.ESB, outBuf);
+			});
+		}));
 	}
 
 	private Mono<Void> penaltyProcess(ByteBuf inBuf, InterfaceSpec interfaceSpec, String esbTxId, String centerTxId) {
 		String rcvCode = interfaceSpec.getRcvCode();
-		if (SystemCodeConstants.SUMMRAY.equals(rcvCode)) {
-			// 고지내역 상세조회
-			String useOrgTxId = esbTxId.substring(esbTxId.length() - 12);
-			if (TcpHeaderTransactionCode.VIEW_BILLING_DETAIL.getCode().equals(interfaceSpec.getMessageCode())) {
-				ViewBillingDetailBody body = ViewBillingDetailParser
-						.toEntity(MessageSlice.getVeiwBillingDetailTotalBody(inBuf));
-				body.setCentTranNo(centerTxId);
-				body.setOrgaTranNo(useOrgTxId);
-				Mono<SummaryCommonMessage<ViewBillingDetailBody>> resultMono = apiCall(body,
-						interfaceSpec.getApiPath());
-				resultMono.subscribe(res -> {
-					ViewBillingDetailBody response = res.getOutputData();
-					String messageBody = ViewBillingDetailParser.toMessage(response);
-					//tcp server를 호출하던지.. 여기서 txid, interfaceid 뽑아내고 응답 주던지 처리 필요
-				});
-			}
-			// 납부결과 통지
-			else {
-				PaymentResultNotificationBody body = PaymentResultNotificationParser
-						.toEntity(MessageSlice.getPaymentResultNotificationTotalBody(inBuf));
-				body.setCentTranNo(centerTxId);
-				body.setOrgaTranNo(useOrgTxId);
-				return apiCall(body, interfaceSpec.getApiPath());
-			}
+		if (!SystemCodeConstants.SUMMRAY.equals(rcvCode)) {
+			return getTcpClientAndSendMessage(rcvCode, inBuf.retain());
+		}
+		String useOrgTxId = esbTxId.substring(esbTxId.length() - 12);
+		if (TcpHeaderTransactionCode.VIEW_BILLING_DETAIL.getCode().equals(interfaceSpec.getMessageCode())) {
+			String bodyMessage = MessageSlice.getVeiwBillingDetailTotalBody(inBuf);
+			ViewBillingDetailBody reqBody = ViewBillingDetailParser.toEntity(bodyMessage);
+			reqBody.setCentTranNo(centerTxId);
+			reqBody.setOrgaTranNo(useOrgTxId);
+			return apiCall(reqBody, interfaceSpec.getApiPath()).flatMap(response -> {
+				String msg = ViewBillingDetailParser.toMessage(response.getOutputData());
+				ByteBuf outBuf = buildResponseBuf(inBuf, "0210", response.getResCode(), useOrgTxId, msg);
+				return getTcpClientAndSendMessage(SystemCodeConstants.ESB, outBuf);
+			}).onErrorResume(ex -> {
+				log.error("API 호출 중 오류 발생: " + ex.getMessage());
+				ByteBuf outBuf = buildResponseBuf(inBuf, "0210", "093", useOrgTxId, bodyMessage);
+				return getTcpClientAndSendMessage(SystemCodeConstants.ESB, outBuf);
+			});
 		} else {
-			return getTcpClientAndSendMessage(rcvCode, inBuf);
+			String bodyMessage = MessageSlice.getPaymentResultNotificationTotalBody(inBuf);
+			PaymentResultNotificationBody reqBody = PaymentResultNotificationParser.toEntity(bodyMessage);
+			reqBody.setCentTranNo(centerTxId);
+			reqBody.setOrgaTranNo(useOrgTxId);
+			return apiCall(reqBody, interfaceSpec.getApiPath()).flatMap(response -> {
+				String msg = PaymentResultNotificationParser.toMessage(response.getOutputData());
+				ByteBuf outBuf = buildResponseBuf(inBuf, "0210", response.getResCode(), useOrgTxId, msg);
+				return getTcpClientAndSendMessage(SystemCodeConstants.ESB, outBuf);
+			}).onErrorResume(ex -> {
+				log.error("API 호출 중 오류 발생: " + ex.getMessage());
+				ByteBuf outBuf = buildResponseBuf(inBuf, "0210", "093", useOrgTxId, bodyMessage);
+				return getTcpClientAndSendMessage(SystemCodeConstants.ESB, outBuf);
+			});
 		}
 	}
 
 	private Mono<Void> testCall(ByteBuf inBuf, InterfaceSpec interfaceSpec) {
 		if (directTestCallReturn != null) {
-			return getTcpClientAndSendMessage(SystemCodeConstants.KFTC,
-					Unpooled.copiedBuffer(directTestCallReturn, TcpCommonSettingConstants.MESSAGE_CHARSET));
-		} else {
-			return getTcpClientAndSendMessage(interfaceSpec.getRcvCode(), inBuf);
+			ByteBuf buf = Unpooled.copiedBuffer(directTestCallReturn, TcpCommonSettingConstants.MESSAGE_CHARSET);
+			return getTcpClientAndSendMessage(SystemCodeConstants.KFTC, buf);
 		}
+		return getTcpClientAndSendMessage(interfaceSpec.getRcvCode(), inBuf.retain());
 	}
 
 	public <T> Mono<SummaryCommonMessage<T>> apiCall(T request, String contextPath) {
@@ -203,7 +207,25 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			asyncClient.callAsync(ByteBufUtils.addMessageLength(inBuf));
 			return null; // Mono<Void>
 		});
+	}
 
+	private ByteBuf buildResponseBuf(ByteBuf inBuf, String msgCode, String resCode, String orgaTxId,
+			String messageBody) {
+		ByteBuf headerBuf = null;
+		ByteBuf bodyBuf = null;
+		ByteBuf outBuf = null;
+		try {
+			headerBuf = CommonHeaderParser.responseHeader(inBuf, msgCode, resCode, orgaTxId);
+			bodyBuf = Unpooled.copiedBuffer(messageBody, TcpCommonSettingConstants.MESSAGE_CHARSET);
+			// headerBuf + bodyBuf 합친 새로운 outBuf
+			outBuf = Unpooled.copiedBuffer(headerBuf, bodyBuf);
+			return outBuf;
+		} finally {
+			if (headerBuf != null && headerBuf.refCnt() > 0)
+				headerBuf.release();
+			if (bodyBuf != null && bodyBuf.refCnt() > 0)
+				bodyBuf.release();
+		}
 	}
 
 	@Override
@@ -230,5 +252,4 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 					.subscribe();
 		}
 	}
-
 }
