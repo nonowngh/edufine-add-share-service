@@ -141,15 +141,21 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			if (!SystemCodeConstants.KFTC.equals(interfaceSpec.getSndCode()))
 				return Mono.empty();
 			String useOrgTxId = esbTxId.substring(esbTxId.length() - 12);
-			CancelPaymentBody reqBody = CancelPaymentParser.toEntity(MessageSlice.getCancelPaymentTotalBody(inBuf));
+			String bodyMessage = MessageSlice.getCancelPaymentTotalBody(inBuf);
+			CancelPaymentBody reqBody = CancelPaymentParser.toEntity(bodyMessage);
 			reqBody.setOrgaTranNo(useOrgTxId);
 			return apiCall(reqBody, interfaceSpec.getApiPath()) // Map<String, Object>로 받도록 apiCall 수정 필요
 					.flatMap(response -> {
-						PaymentResultNotificationBody resBody = mapper.convertValue(response.getOutputData(),
-								PaymentResultNotificationBody.class);
-						String msg = PaymentResultNotificationParser.toMessage(resBody);
-						ByteBuf outBuf = buildResponseBuf(inBuf, "0210", response.getResCode(), useOrgTxId, msg);
-						return getTcpClientAndSendMessage(SystemCodeConstants.ESB, outBuf);
+						log.info("Api reponse -> [{}]'{}'", response.getResCode(), response.getResMsg());
+						if (response.getOutputData() == null || response.getOutputData().isEmpty()) {
+							return getTcpClientAndSendMessage(SystemCodeConstants.ESB,
+									buildResponseBuf(inBuf, "0430", response.getResCode(), useOrgTxId, bodyMessage));
+						}
+						CancelPaymentBody resBody = mapper.convertValue(response.getOutputData(),
+								CancelPaymentBody.class);
+						String msg = CancelPaymentParser.toMessage(resBody);
+						return getTcpClientAndSendMessage(SystemCodeConstants.ESB,
+								buildResponseBuf(inBuf, "0430", response.getResCode(), useOrgTxId, msg));
 					}).onErrorResume(ex -> {
 						log.error("API 호출 중 오류 발생: " + ex.getMessage());
 						ByteBuf outBuf = buildResponseBuf(inBuf, "0430", TcpStatusCode.SYSTEM_ERROR.getCode(),
@@ -172,11 +178,16 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			reqBody.setOrgaTranNo(useOrgTxId);
 			return apiCall(reqBody, interfaceSpec.getApiPath()) // Map<String, Object>로 받도록 apiCall 수정 필요
 					.flatMap(response -> {
+						log.info("Api reponse -> [{}]'{}'", response.getResCode(), response.getResMsg());
+						if (response.getOutputData() == null || response.getOutputData().isEmpty()) {
+							return getTcpClientAndSendMessage(SystemCodeConstants.ESB,
+									buildResponseBuf(inBuf, "0210", response.getResCode(), useOrgTxId, bodyMessage));
+						}
 						ViewBillingDetailBody resBody = mapper.convertValue(response.getOutputData(),
 								ViewBillingDetailBody.class);
 						String msg = ViewBillingDetailParser.toMessage(resBody);
-						ByteBuf outBuf = buildResponseBuf(inBuf, "0210", response.getResCode(), useOrgTxId, msg);
-						return getTcpClientAndSendMessage(SystemCodeConstants.ESB, outBuf);
+						return getTcpClientAndSendMessage(SystemCodeConstants.ESB,
+								buildResponseBuf(inBuf, "0210", response.getResCode(), useOrgTxId, msg));
 					}).onErrorResume(ex -> {
 						log.error("API 호출 중 오류 발생: ", ex);
 						ByteBuf outBuf = buildResponseBuf(inBuf, "0210", TcpStatusCode.SYSTEM_ERROR.getCode(),
@@ -190,11 +201,16 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			reqBody.setOrgaTranNo(useOrgTxId);
 			return apiCall(reqBody, interfaceSpec.getApiPath()) // Map<String, Object>로 받도록 apiCall 수정 필요
 					.flatMap(response -> {
+						log.info("Api reponse -> [{}]'{}'", response.getResCode(), response.getResMsg());
+						if (response.getOutputData() == null || response.getOutputData().isEmpty()) {
+							return getTcpClientAndSendMessage(SystemCodeConstants.ESB,
+									buildResponseBuf(inBuf, "0210", response.getResCode(), useOrgTxId, bodyMessage));
+						}
 						PaymentResultNotificationBody resBody = mapper.convertValue(response.getOutputData(),
 								PaymentResultNotificationBody.class);
 						String msg = PaymentResultNotificationParser.toMessage(resBody);
-						ByteBuf outBuf = buildResponseBuf(inBuf, "0210", response.getResCode(), useOrgTxId, msg);
-						return getTcpClientAndSendMessage(SystemCodeConstants.ESB, outBuf);
+						return getTcpClientAndSendMessage(SystemCodeConstants.ESB,
+								buildResponseBuf(inBuf, "0210", response.getResCode(), useOrgTxId, msg));
 					}).onErrorResume(ex -> {
 						log.error("API 호출 중 오류 발생: ", ex);
 						ByteBuf outBuf = buildResponseBuf(inBuf, "0210", TcpStatusCode.SYSTEM_ERROR.getCode(),

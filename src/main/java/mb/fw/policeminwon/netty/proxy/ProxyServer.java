@@ -31,7 +31,6 @@ public class ProxyServer {
 	private WebClient webClient;
 
 	@Autowired(required = false)
-	@Qualifier("esbJmsTemplate")
 	JmsTemplate esbJmsTemplate;
 
 	private int bindPort;
@@ -66,13 +65,6 @@ public class ProxyServer {
 												: new LoggingHandler(LogLevel.INFO),
 										new ProxyServerHandler(clients, webClient, interfaceSpecList, esbJmsTemplate,
 												directTestCallReturn));
-//								ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4), new ProxyServerHandler(clients, webClient, interfaceSpecList, esbJmsTemplate,
-//										directTestCallReturn));
-//								ch.pipeline().addLast(
-//										TcpCommonSettingConstants.PRETTY_LOGGING ? new PrettyLoggingHandler(LogLevel.INFO)
-//												: new LoggingHandler(LogLevel.INFO),
-//										new ProxyServerHandler(clients, webClient, interfaceSpecList, esbJmsTemplate,
-//												directTestCallReturn));
 							}
 						});
 

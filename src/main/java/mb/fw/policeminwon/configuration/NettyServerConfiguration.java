@@ -21,28 +21,18 @@ import mb.fw.policeminwon.spec.InterfaceSpecList;
 public class NettyServerConfiguration {
 
 	private Proxy proxy;
-	private Summary summary;
-	
+
 	@Data
 	public static class Proxy {
 		private int bindPort;
 		private String directTestCallReturn = null;
 	}
 
-	@Data
-	public static class Summary {
-		private int bindPort;
-	}
-
 	@Bean(initMethod = "start", destroyMethod = "shutdown")
 	@ConditionalOnProperty(prefix = "tcp.server.proxy", name = "enabled", havingValue = "true")
-	ProxyServer proxyServer(List<AsyncConnectionClient> clients, @Qualifier("webClient") Optional<WebClient> optionalWebClient, InterfaceSpecList interfaceSpecList) {
-		return new ProxyServer(proxy.getBindPort(), clients, optionalWebClient, interfaceSpecList, proxy.getDirectTestCallReturn());
+	ProxyServer proxyServer(List<AsyncConnectionClient> clients,
+			@Qualifier("webClient") Optional<WebClient> optionalWebClient, InterfaceSpecList interfaceSpecList) {
+		return new ProxyServer(proxy.getBindPort(), clients, optionalWebClient, interfaceSpecList,
+				proxy.getDirectTestCallReturn());
 	}
-
-//	@Bean(initMethod = "start", destroyMethod = "shutdown")
-//	@ConditionalOnProperty(prefix = "tcp.server.summary", name = "enabled", havingValue = "true")
-//	SummaryServer summaryServer() {
-//		return new SummaryServer(summary.getBindPort());
-//	}
 }
