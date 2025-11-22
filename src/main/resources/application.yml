@@ -28,13 +28,12 @@ tcp:
           host: 127.0.0.1
           port: 9999
           reconnect-delay-sec: 3600000
-
 jms:
   logging:
     enabled: false
 spring:
   profiles:
-    active: proxy
+    active: proxy, message-simul, mock-server
   main:
     allow-bean-definition-overriding: true
   autoconfigure:

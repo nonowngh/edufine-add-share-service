@@ -21,7 +21,7 @@ import mb.fw.policeminwon.utils.ByteBufUtils;
 @RequestMapping("/sjand/cmn")
 public class SummaryTestController {
 
-	@Value("${mock.response.success-view-billing-detail:false}")
+	@Value("${mock.response.success-view-billing-detail:true}")
 	private boolean mockViewBillingDetail;
 	@Value("${mock.response.success-payment-result-notification:true}")
 	private boolean mockPaymentResultNotification;

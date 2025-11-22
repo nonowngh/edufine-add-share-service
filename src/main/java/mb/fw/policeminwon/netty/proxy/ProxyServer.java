@@ -31,6 +31,7 @@ public class ProxyServer {
 	private WebClient webClient;
 
 	@Autowired(required = false)
+	@Qualifier("esbJmsTemplate")
 	JmsTemplate esbJmsTemplate;
 
 	private int bindPort;
@@ -50,7 +51,6 @@ public class ProxyServer {
 	public void start() {
 		bossGroup = new NioEventLoopGroup(1);
 		workerGroup = new NioEventLoopGroup();
-
 		Thread serverThread = new Thread(() -> {
 			try {
 				ServerBootstrap b = new ServerBootstrap();
