@@ -14,4 +14,11 @@ public class TransactionIdGenerator {
 			return interfaceId + "_" + msgSendTime + "_" + alias
 					+ RandomStringUtils.randomAlphanumeric(3).toUpperCase();
 	}
+	
+	public static String generateSync(String interfaceId, String syncNo, String msgSendTime, String msgCreDt) {
+		if (msgSendTime.trim().isEmpty() || msgSendTime == "000000000000")
+			return interfaceId + "_" + msgCreDt + "_" + syncNo;
+		else
+			return interfaceId + "_" + msgSendTime + "_" + syncNo;
+	}
 }

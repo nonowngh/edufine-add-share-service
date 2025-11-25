@@ -50,7 +50,7 @@ public class TcpHandlerLoggingFilter {
 				log.error("JMS end logging error!!!", e);
 			}
 		}).onErrorResume(error -> Mono.empty()).doFinally(signalType -> {
-			CommonLoggingUtils.loggingTcpResponse(responseCode);
+			CommonLoggingUtils.loggingTcpResponse(responseCode, esbTxId);
 			log.info("===[{}] 처리 종료===", esbTxId);
 		});
 	}

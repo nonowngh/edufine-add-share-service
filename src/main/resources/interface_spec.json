@@ -78,30 +78,16 @@
             "interfaceId": "IF_KFT_SJS_05",
             "messageCode": "992001",
             "sndCode": "KFT",
-            "rcvCode": "SJS",
-            "description": "범칙금 과태료 납부(재) 취소 요청(즉심)",
+            "rcvCode": "ALL",
+            "description": "범칙금 과태료 납부(재) 취소 요청(즉심, 교통)",
             "apiPath": "/sjand/cmn/savePayRtrcn.do"
         },
         {
             "interfaceId": "IF_SJS_KFT_05",
             "messageCode": "992001",
-            "sndCode": "SJS",
+            "sndCode": "ALL",
             "rcvCode": "KFT",
-            "description": "범칙금 과태료 납부(재) 취소 응답(즉심)"
-        },
-        {
-            "interfaceId": "IF_KFT_TCS_06",
-            "messageCode": "992001",
-            "sndCode": "KFT",
-            "rcvCode": "TCS",
-            "description": "범칙금 과태료 납부(재) 취소 요청(교통)"
-        },
-        {
-            "interfaceId": "IF_TCS_KFT_06",
-            "messageCode": "992001",
-            "sndCode": "TCS",
-            "rcvCode": "KFT",
-            "description": "범칙금 과태료 납부(재) 취소 응답(교통)"
+            "description": "범칙금 과태료 납부(재) 취소 요청(즉심, 교통)"
         }
     ]
 }

@@ -23,7 +23,7 @@ public class SummaryTestController {
 
 	@Value("${mock.response.success-view-billing-detail:true}")
 	private boolean mockViewBillingDetail;
-	@Value("${mock.response.success-payment-result-notification:true}")
+	@Value("${mock.response.success-payment-result-notification:false}")
 	private boolean mockPaymentResultNotification;
 	@Value("${mock.response.success-cancel-payment:true}")
 	private boolean mockCancelPayment;
@@ -60,7 +60,7 @@ public class SummaryTestController {
 
 	public static void main(String[] args) {
 		Charset charset = Charset.forName("MS949"); // TcpCommonSettingConstants.MESSAGE_CHARSET 사용 가능
-		String message = "IGN0990800122001   C   2025072909400CT123465678            121234567  62042116547120175980137202530000015506          000000000075000201807133650000                              6204211654712                    V Q         ";
+		String message = "IGN0990800121002   C   2025072909400CT123465678            121234567  36500006204211654712CT000957020 250402004641                000000000032000SQ         ";
 		// String → ByteBuf
 		ByteBuf buf = Unpooled.copiedBuffer(message, charset);
 		// ByteBuf 읽기

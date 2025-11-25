@@ -26,6 +26,10 @@ public class MessageSlice {
 	public static String getCenterTxId(ByteBuf buf) {
 		return ByteBufUtils.getStringfromBytebuf(buf, 35, 12);
 	}
+
+	public static String getEsbTxiTail(ByteBuf buf) {
+		return ByteBufUtils.getStringfromBytebuf(buf, 53, 6);
+	}
 //	public static String getSrFlag(ByteBuf buf) {
 //		return ByteBufUtils.getStringfromBytebuf(buf, 23, 1);
 //	}
@@ -53,9 +57,14 @@ public class MessageSlice {
 //		return ByteBufUtils.getStringfromBytebuf(buf, 24, 3);
 //	}
 
-	// 전자납부번호(body index 0 ~ 19)
-	public static String getElecPayNo(ByteBuf buf) {
+	// 전자납부번호(body index 0 ~ 19) - 고지내역 조회
+	public static String getElecPayNoViewBillingDetail(ByteBuf buf) {
 		return ByteBufUtils.getStringfromBytebuf(buf, HEADER_LENGTH, 19);
+	}
+
+	// 전자납부번호(body index 19 ~ 38) - 통지
+	public static String getElecPayNoPaymentResultNotification(ByteBuf buf) {
+		return ByteBufUtils.getStringfromBytebuf(buf, HEADER_LENGTH + 19, 19);
 	}
 
 	// 바디 정보(body length 630)

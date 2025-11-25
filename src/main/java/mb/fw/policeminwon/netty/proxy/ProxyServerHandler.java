@@ -89,21 +89,31 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			String rcvCode = TcpMessageConstants.SRFLAG_KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstants.TRAFFIC
 					: SystemCodeConstants.KFTC;
 			if (panaltyTransactionCode.contains(tcpHeaderTransactionCode)) {
-				String policeSystemCode = MessageSlice.getElecPayNo(inBuf);
+				String policeSystemCode = TcpHeaderTransactionCode.VIEW_BILLING_DETAIL.equals(tcpHeaderTransactionCode)
+						? MessageSlice.getElecPayNoViewBillingDetail(inBuf)
+						: MessageSlice.getElecPayNoPaymentResultNotification(inBuf);
 				if (policeSystemCode.startsWith(TcpMessageConstants.getSJSElecNumType())) {
 					if (SystemCodeConstants.KFTC.equals(sndCode))
 						rcvCode = SystemCodeConstants.SUMMRAY;
 					else
 						sndCode = SystemCodeConstants.SUMMRAY;
 				}
+			} else if (TcpHeaderTransactionCode.CANCEL_PAYMENT.equals(tcpHeaderTransactionCode)) {
+				if (SystemCodeConstants.KFTC.equals(sndCode))
+					rcvCode = SystemCodeConstants.ALL;
+				else
+					sndCode = SystemCodeConstants.ALL;
 			}
 			String responseCode = MessageSlice.getResponseCode(inBuf);
 			InterfaceSpec interfaceSpec = interfaceSpecList.findInterfaceInfo(sndCode, rcvCode,
 					tcpHeaderTransactionCode.getCode());
 			String reqMsgDateTime = MessageSlice.getSendTime(inBuf);
 			String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
-			String esbTxId = TransactionIdGenerator.generate(interfaceSpec.getInterfaceId(),
-					TransactionSequenceGenerator.getNextSequence(), reqMsgDateTime, nowDateTime);
+			String esbTxId = SystemCodeConstants.SUMMRAY.equals(sndCode)
+					? TransactionIdGenerator.generateSync(interfaceSpec.getInterfaceId(),
+							MessageSlice.getEsbTxiTail(inBuf), reqMsgDateTime, nowDateTime)
+					: TransactionIdGenerator.generate(interfaceSpec.getInterfaceId(),
+							TransactionSequenceGenerator.getNextSequence(), reqMsgDateTime, nowDateTime);
 			String centerTxId = MessageSlice.getCenterTxId(inBuf);
 
 			Map<TcpHeaderTransactionCode, Mono<Void>> actions = new HashMap<>();
@@ -137,32 +147,41 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 	}
 
 	private Mono<Void> cancelProcess(ByteBuf inBuf, InterfaceSpec interfaceSpec, String esbTxId) {
-		return getTcpClientAndSendMessage(interfaceSpec.getRcvCode(), inBuf).then(Mono.defer(() -> {
-			if (!SystemCodeConstants.KFTC.equals(interfaceSpec.getSndCode()))
-				return Mono.empty();
-			String useOrgTxId = esbTxId.substring(esbTxId.length() - 12);
-			String bodyMessage = MessageSlice.getCancelPaymentTotalBody(inBuf);
-			CancelPaymentBody reqBody = CancelPaymentParser.toEntity(bodyMessage);
-			reqBody.setOrgaTranNo(useOrgTxId);
-			return apiCall(reqBody, interfaceSpec.getApiPath()) // Map<String, Object>로 받도록 apiCall 수정 필요
-					.flatMap(response -> {
-						log.info("Api reponse -> [{}]'{}'", response.getResCode(), response.getResMsg());
-						if (response.getOutputData() == null || response.getOutputData().isEmpty()) {
-							return getTcpClientAndSendMessage(SystemCodeConstants.ESB,
-									buildResponseBuf(inBuf, "0430", response.getResCode(), useOrgTxId, bodyMessage));
-						}
-						CancelPaymentBody resBody = mapper.convertValue(response.getOutputData(),
-								CancelPaymentBody.class);
-						String msg = CancelPaymentParser.toMessage(resBody);
-						return getTcpClientAndSendMessage(SystemCodeConstants.ESB,
-								buildResponseBuf(inBuf, "0430", response.getResCode(), useOrgTxId, msg));
-					}).onErrorResume(ex -> {
-						log.error("API 호출 중 오류 발생: " + ex.getMessage());
-						ByteBuf outBuf = buildResponseBuf(inBuf, "0430", TcpStatusCode.SYSTEM_ERROR.getCode(),
-								useOrgTxId, "시스템 오류 : 즉심 API 호출 오류");
-						return getTcpClientAndSendMessage(SystemCodeConstants.ESB, outBuf);
-					});
-		}));
+		return getTcpClientAndSendMessage(
+				SystemCodeConstants.ALL.equals(interfaceSpec.getRcvCode()) ? SystemCodeConstants.TRAFFIC
+						: SystemCodeConstants.KFTC,
+				inBuf).onErrorResume(ex -> {
+					log.warn("상단 TCP 전송 실패(무시하고 계속 진행): {}", ex.getMessage());
+					return Mono.empty();
+				}).then(Mono.defer(() -> {
+					if (!SystemCodeConstants.KFTC.equals(interfaceSpec.getSndCode()))
+						return Mono.empty();
+					String useOrgTxId = esbTxId.substring(esbTxId.length() - 12);
+					String bodyMessage = MessageSlice.getCancelPaymentTotalBody(inBuf);
+					CancelPaymentBody reqBody = CancelPaymentParser.toEntity(bodyMessage);
+					reqBody.setOrgaTranNo(useOrgTxId);
+					return apiCall(reqBody, interfaceSpec.getApiPath()) // Map<String, Object>로 받도록 apiCall 수정 필요
+							.flatMap(response -> {
+								return getTcpClientAndSendMessage(SystemCodeConstants.ESB, null);
+//						if (response.getOutputData() == null || response.getOutputData().isEmpty()) {
+//							return getTcpClientAndSendMessage(SystemCodeConstants.ESB,
+//									buildResponseBuf(inBuf, "0430", response.getResCode(), useOrgTxId, bodyMessage));
+//						}
+//						CancelPaymentBody resBody = mapper.convertValue(response.getOutputData(),
+//								CancelPaymentBody.class);
+//						String msg = CancelPaymentParser.toMessage(resBody);
+//						return getTcpClientAndSendMessage(SystemCodeConstants.ESB,
+//								buildResponseBuf(inBuf, "0430", response.getResCode(), useOrgTxId, msg));
+							}).onErrorResume(ex -> {
+								log.error("API 호출 중 오류 발생: ", ex);
+//						ByteBuf outBuf = buildResponseBuf(inBuf, "0430", TcpStatusCode.SYSTEM_ERROR.getCode(),
+//								useOrgTxId, "시스템 오류 : 즉심 API 호출 오류");
+//						return getTcpClientAndSendMessage(SystemCodeConstants.ESB, outBuf);
+								return getTcpClientAndSendMessage(SystemCodeConstants.ESB, null);
+							}).doFinally(sig -> {
+								log.info("프로세스 종료...(즉심 응답은 금결원으로 전달하지 않고, 교통 응답만 전달)");
+							});
+				}));
 	}
 
 	private Mono<Void> penaltyProcess(ByteBuf inBuf, InterfaceSpec interfaceSpec, String esbTxId, String centerTxId) {
@@ -178,7 +197,6 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			reqBody.setOrgaTranNo(useOrgTxId);
 			return apiCall(reqBody, interfaceSpec.getApiPath()) // Map<String, Object>로 받도록 apiCall 수정 필요
 					.flatMap(response -> {
-						log.info("Api reponse -> [{}]'{}'", response.getResCode(), response.getResMsg());
 						if (response.getOutputData() == null || response.getOutputData().isEmpty()) {
 							return getTcpClientAndSendMessage(SystemCodeConstants.ESB,
 									buildResponseBuf(inBuf, "0210", response.getResCode(), useOrgTxId, bodyMessage));
@@ -201,7 +219,6 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			reqBody.setOrgaTranNo(useOrgTxId);
 			return apiCall(reqBody, interfaceSpec.getApiPath()) // Map<String, Object>로 받도록 apiCall 수정 필요
 					.flatMap(response -> {
-						log.info("Api reponse -> [{}]'{}'", response.getResCode(), response.getResMsg());
 						if (response.getOutputData() == null || response.getOutputData().isEmpty()) {
 							return getTcpClientAndSendMessage(SystemCodeConstants.ESB,
 									buildResponseBuf(inBuf, "0210", response.getResCode(), useOrgTxId, bodyMessage));
@@ -228,16 +245,6 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 		return getTcpClientAndSendMessage(interfaceSpec.getRcvCode(), inBuf);
 	}
 
-//	public <T> Mono<SummaryCommonMessage<T>> apiCall(T request, String contextPath) {
-//		if (webClient == null) {
-//			log.error("WebClient is NULL. check yaml file.");
-//			return Mono.error(new IllegalStateException("WebClient is NULL"));
-//		}
-//		return webClient.post().uri(contextPath).bodyValue(request).retrieve()
-//				.bodyToMono(new ParameterizedTypeReference<SummaryCommonMessage<T>>() {
-//				}).doOnNext(response -> log.info("API response : {}", response));
-//	}
-
 	public <T> Mono<SummaryCommonMessage<Map<String, Object>>> apiCall(T request, String contextPath) {
 		if (webClient == null) {
 			log.error("WebClient is NULL. check yaml file.");
@@ -249,6 +256,8 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 	}
 
 	private Mono<Void> getTcpClientAndSendMessage(String targetSystemCode, ByteBuf inBuf) {
+		if (inBuf == null)
+			return Mono.empty();
 		return Mono.fromCallable(() -> {
 			AsyncConnectionClient asyncClient = clients.stream()
 					.filter(client -> client.getSystemCode().equals(targetSystemCode)).findFirst()
@@ -294,7 +303,7 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			CustomHandlerException ex = (CustomHandlerException) cause;
 			String targetSystemCode = ex.getSystemCode();
 			String tcpHeaderMessage = ex.getHeaderMessage();
-			CommonLoggingUtils.loggingTcpResponse(ex.getStatusCode().getCode());
+			CommonLoggingUtils.loggingTcpResponse(ex.getStatusCode().getCode(), "");
 			getTcpClientAndSendMessage(targetSystemCode,
 					ByteBufUtils.addMessageLength(Unpooled.copiedBuffer(
 							CommonHeaderParser.responseHeader(tcpHeaderMessage, "", ex.getStatusCode().getCode(), ""))))

@@ -8,10 +8,10 @@ import mb.fw.policeminwon.constants.TcpStatusCode;
 public class CommonLoggingUtils {
 
 	// logging tcp header response code
-	public static void loggingTcpResponse(String responseCode) {
+	public static void loggingTcpResponse(String responseCode, String esbTxId) {
 		if(responseCode.trim().isEmpty()) return;
 		TcpStatusCode tcpStatusCode = TcpStatusCode.fromCode(responseCode);
-		String errorMsg = "tcp response code : [" + tcpStatusCode.getCode() + "]" + tcpStatusCode.getDescription();
+		String errorMsg = "'" + esbTxId + "' tcp response code : [" + tcpStatusCode.getCode() + "]" + tcpStatusCode.getDescription();
 		log.info(errorMsg);
 	}
 	
