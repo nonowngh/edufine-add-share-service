@@ -54,8 +54,9 @@ public class CommonHeaderParser {
 			ByteBufUtils.writeRightPaddingString(resBuf, "", 3); // 상태코드(3)
 			resBuf.writeBytes("G".getBytes()); // 송수신FLAG(1)
 			ByteBufUtils.writeRightPaddingString(resBuf, statusCode, 3); // 응답코드(3)
-			String formattedTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"));
-			ByteBufUtils.writeRightPaddingString(resBuf, formattedTime, 12); // 전송일시(12)
+//			String formattedTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"));
+//			ByteBufUtils.writeRightPaddingString(resBuf, formattedTime, 12); // 전송일시(12)
+			resBuf.writeBytes(ByteBufUtils.getStringfromBytebuf(headerBuf, 23, 12).getBytes()); // 전송일시(12)
 			resBuf.writeBytes(ByteBufUtils.getStringfromBytebuf(headerBuf, 35, 12).getBytes()); // 센터전문관리번호(12)
 			ByteBufUtils.writeRightPaddingString(resBuf, policeTransactionId, 12); // 이용기관전문관리번호(12)
 			resBuf.writeBytes(ByteBufUtils.getStringfromBytebuf(headerBuf, 59, 2).getBytes()); // 이용기관발행기관분류코드(2)

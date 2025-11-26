@@ -14,6 +14,9 @@ public class MessageSlice {
 	public static String getTransactionCode(ByteBuf buf) {
 		return ByteBufUtils.getStringfromBytebuf(buf, 10, 6);
 	}
+	public static String getTransactionCodeWrite(ByteBuf buf) {
+		return ByteBufUtils.getStringfromBytebuf(buf, 14, 6);
+	}
 	
 	public static String getSendTime(ByteBuf buf) {
 		return ByteBufUtils.getStringfromBytebuf(buf, 23, 12);
@@ -21,6 +24,10 @@ public class MessageSlice {
 
 	public static String getSrFlag(ByteBuf buf) {
 		return ByteBufUtils.getStringfromBytebuf(buf, 19, 1);
+	}
+
+	public static String getSrFlagWrite(ByteBuf buf) {
+		return ByteBufUtils.getStringfromBytebuf(buf, 23, 1);
 	}
 
 	public static String getCenterTxId(ByteBuf buf) {
@@ -62,9 +69,19 @@ public class MessageSlice {
 		return ByteBufUtils.getStringfromBytebuf(buf, HEADER_LENGTH, 19);
 	}
 
+	// 전자납부번호(body index 0 ~ 19) - 고지내역 조회(쓰기용)
+	public static String getElecPayNoViewBillingDetailWrite(ByteBuf buf) {
+		return ByteBufUtils.getStringfromBytebuf(buf, HEADER_LENGTH + 4, 19);
+	}
+
 	// 전자납부번호(body index 19 ~ 38) - 통지
 	public static String getElecPayNoPaymentResultNotification(ByteBuf buf) {
 		return ByteBufUtils.getStringfromBytebuf(buf, HEADER_LENGTH + 19, 19);
+	}
+
+	// 전자납부번호(body index 19 ~ 38) - 통지(쓰기용)
+	public static String getElecPayNoPaymentResultNotificationWrite(ByteBuf buf) {
+		return ByteBufUtils.getStringfromBytebuf(buf, (HEADER_LENGTH + 4) + 19, 19);
 	}
 
 	// 바디 정보(body length 630)

@@ -82,7 +82,7 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 			if (tcpHeaderTransactionCode == null)
 				throw new CustomHandlerException("Invalid transaction-code: " + MessageSlice.getTransactionCode(inBuf),
 						TcpStatusCode.FORMAT_ERROR, SystemCodeConstants.KFTC, MessageSlice.getHeaderMessage(inBuf));
-			log.info("KFTC transaction-code -> [{}]", tcpHeaderTransactionCode.getCode());
+			log.debug("KFTC transaction-code -> [{}]", tcpHeaderTransactionCode.getCode());
 			String srFlag = MessageSlice.getSrFlag(inBuf);
 			String sndCode = TcpMessageConstants.SRFLAG_KFTC.equalsIgnoreCase(srFlag) ? SystemCodeConstants.KFTC
 					: SystemCodeConstants.TRAFFIC;
@@ -109,11 +109,13 @@ public class ProxyServerHandler extends ChannelInboundHandlerAdapter {
 					tcpHeaderTransactionCode.getCode());
 			String reqMsgDateTime = MessageSlice.getSendTime(inBuf);
 			String nowDateTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
-			String esbTxId = SystemCodeConstants.SUMMRAY.equals(sndCode)
-					? TransactionIdGenerator.generateSync(interfaceSpec.getInterfaceId(),
-							MessageSlice.getEsbTxiTail(inBuf), reqMsgDateTime, nowDateTime)
-					: TransactionIdGenerator.generate(interfaceSpec.getInterfaceId(),
-							TransactionSequenceGenerator.getNextSequence(), reqMsgDateTime, nowDateTime);
+//			String esbTxId = SystemCodeConstants.SUMMRAY.equals(sndCode)
+//					? TransactionIdGenerator.generateSync(interfaceSpec.getInterfaceId(),
+//							MessageSlice.getEsbTxiTail(inBuf), reqMsgDateTime, nowDateTime)
+//					: TransactionIdGenerator.generate(interfaceSpec.getInterfaceId(),
+//							TransactionSequenceGenerator.getNextSequence(), reqMsgDateTime, nowDateTime);
+			String esbTxId = TransactionIdGenerator.generate(interfaceSpec.getInterfaceId(),
+					TransactionSequenceGenerator.getNextSequence(), reqMsgDateTime, nowDateTime);
 			String centerTxId = MessageSlice.getCenterTxId(inBuf);
 
 			Map<TcpHeaderTransactionCode, Mono<Void>> actions = new HashMap<>();

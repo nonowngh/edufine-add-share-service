@@ -25,7 +25,7 @@ import io.netty.util.ReferenceCounted;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import mb.fw.policeminwon.constants.TcpCommonSettingConstants;
-import mb.fw.policeminwon.netty.proxy.PrettyLoggingHandler;
+import mb.fw.policeminwon.netty.proxy.logging.CustomLoggingHandler;
 
 @Slf4j
 public class AsyncConnectionClient {
@@ -57,9 +57,13 @@ public class AsyncConnectionClient {
 			@Override
 			protected void initChannel(SocketChannel ch) {
 				ChannelPipeline p = ch.pipeline();
+				p.addFirst(TcpCommonSettingConstants.PRETTY_LOGGING ? new CustomLoggingHandler()
+						: new LoggingHandler(LogLevel.INFO));
 //           	 	p.addLast(new mb.fw.net.common.codec.LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4, true));
-				p.addLast(TcpCommonSettingConstants.PRETTY_LOGGING ? new PrettyLoggingHandler(LogLevel.INFO)
-						: new LoggingHandler(LogLevel.INFO), new SimpleChannelInboundHandler<Object>() {
+				p.addLast(
+//						TcpCommonSettingConstants.PRETTY_LOGGING ? new PrettyLoggingHandler(LogLevel.INFO)
+//						: new LoggingHandler(LogLevel.INFO), 
+						new SimpleChannelInboundHandler<Object>() {
 							@Override
 							protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
 								super.channelRead(ctx, msg);

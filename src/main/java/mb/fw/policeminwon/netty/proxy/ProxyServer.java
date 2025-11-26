@@ -20,6 +20,7 @@ import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
 import mb.fw.policeminwon.constants.TcpCommonSettingConstants;
 import mb.fw.policeminwon.netty.proxy.client.AsyncConnectionClient;
+import mb.fw.policeminwon.netty.proxy.logging.CustomLoggingHandler;
 import mb.fw.policeminwon.spec.InterfaceSpecList;
 
 @Slf4j
@@ -58,11 +59,14 @@ public class ProxyServer {
 						.childHandler(new ChannelInitializer<SocketChannel>() {
 							@Override
 							protected void initChannel(SocketChannel ch) {
+								ch.pipeline()
+										.addFirst(TcpCommonSettingConstants.PRETTY_LOGGING ? new CustomLoggingHandler()
+												: new LoggingHandler(LogLevel.INFO));
 								ch.pipeline().addLast(
 										new mb.fw.net.common.codec.LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4, true),
-										TcpCommonSettingConstants.PRETTY_LOGGING
-												? new PrettyLoggingHandler(LogLevel.INFO)
-												: new LoggingHandler(LogLevel.INFO),
+//										TcpCommonSettingConstants.PRETTY_LOGGING
+//												? new PrettyLoggingHandler(LogLevel.INFO)
+//												: new LoggingHandler(LogLevel.INFO),
 										new ProxyServerHandler(clients, webClient, interfaceSpecList, esbJmsTemplate,
 												directTestCallReturn));
 							}
