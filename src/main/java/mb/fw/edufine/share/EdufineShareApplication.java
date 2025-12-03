@@ -1,4 +1,4 @@
-package mb.fw.policeminwon;
+package mb.fw.edufine.share;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -15,10 +15,10 @@ import mb.fw.atb.util.MDCLogging;
 
 @Slf4j
 @ImportResource({"classpath:bean.xml"})
-@ComponentScan(basePackages = {"mb.fw.policeminwon", "mb.fw.adaptor"})
+@ComponentScan(basePackages = {"mb.fw.edufine", "mb.fw.adaptor"})
 @EnableScheduling
 @SpringBootApplication
-	public class PoliceMinwonApplication {
+	public class EdufineShareApplication {
 
 	public static void main(String[] args) throws Exception {
 		ResourceLeakDetector.setLevel(ResourceLeakDetector.Level.PARANOID);
@@ -27,6 +27,6 @@ import mb.fw.atb.util.MDCLogging;
         String adaptorName = AdaptorConfig.getInstance().getAdaptorName();
         log.info("adaptorName: {}", adaptorName);
         MDCLogging.create("NONE", "NONE", adaptorName);
-        SpringApplication.run(PoliceMinwonApplication.class, args);
+        SpringApplication.run(EdufineShareApplication.class, args);
 	}
 }

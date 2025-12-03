@@ -1,9 +1,8 @@
-package mb.fw.policeminwon.configuration;
+package mb.fw.edufine.share.configuration;
 
 import javax.net.ssl.SSLException;
 
 import org.apache.http.HttpHeaders;
-import org.crsh.console.jline.internal.Log;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -27,8 +26,6 @@ public class WebClientConfiguration {
 
 	private String targetUrl;
 
-	private String callBackUrl;
-
 	@Bean(name = "webClient")
 	WebClient webClient() {
 		if (targetUrl.startsWith("https://")) {
@@ -44,12 +41,6 @@ public class WebClientConfiguration {
 					.defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).build();
 		}
 		return WebClient.builder().baseUrl(targetUrl)
-				.defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).build();
-	}
-
-	@Bean(name = "callBackWebClient")
-	WebClient callBackWebClient() {
-		return WebClient.builder().baseUrl(callBackUrl)
 				.defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).build();
 	}
 }
